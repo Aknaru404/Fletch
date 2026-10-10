@@ -69,7 +69,21 @@ public sealed class ThemeEditor
             resources["ThemeAccent"] = new SolidColorBrush(Color.Parse("#f59e0b"));
             resources["ThemeFocusRing"] = new SolidColorBrush(Color.Parse("#38bdf8"));
 
-
+            // Sub-menus open in their own popup, which Fluent's Dark variant draws with its own brushes.
+            resources["MenuFlyoutPresenterBackground"] = themeBase;
+            resources["MenuFlyoutPresenterBorderBrush"] = themeBorder;
+            resources["MenuFlyoutItemForeground"] = tintedText;
+            resources["MenuFlyoutItemForegroundPointerOver"] = tintedText;
+            resources["MenuFlyoutItemForegroundPressed"] = tintedText;
+            resources["MenuFlyoutItemBackgroundPointerOver"] = themeLighter;
+            resources["MenuFlyoutItemBackgroundPressed"] = themeLighter;
+            resources["MenuFlyoutItemKeyboardAcceleratorTextForeground"] = tintedTextSecondary;
+            resources["MenuFlyoutItemKeyboardAcceleratorTextForegroundPointerOver"] = tintedTextSecondary;
+            resources["MenuFlyoutItemKeyboardAcceleratorTextForegroundPressed"] = tintedTextSecondary;
+            resources["MenuFlyoutSubItemChevron"] = tintedText;
+            resources["MenuFlyoutSubItemChevronPointerOver"] = tintedText;
+            resources["MenuFlyoutSubItemChevronPressed"] = tintedText;
+            resources["MenuFlyoutSubItemChevronSubMenuOpened"] = tintedText;
         }
 
         private double CalculateLuminance(Color color)
