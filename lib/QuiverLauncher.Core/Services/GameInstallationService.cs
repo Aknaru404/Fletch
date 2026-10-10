@@ -13,7 +13,8 @@ public static class GameInstallationService
     public const string IncompleteInstallFileName = "install-incomplete.txt";
 
     /// <summary>
-    /// True for single-file release binaries: .exe, .appimage, or extensionless (e.g. CrashBandicoot_Linux).
+    /// True for single-file release binaries: .exe, .appimage, or extensionless (e.g. CrashBandicoot_Linux,
+    /// P.T.PC.Port.Setup-linux, Game.x86_64).
     /// </summary>
     public static bool IsSingleFileExecutableAsset(string assetName)
     {
@@ -26,7 +27,23 @@ public static class GameInstallationService
             return true;
         }
 
-        return !Path.HasExtension(assetName);
+        return !HasFileTypeExtension(Path.GetFileName(assetName));
+    }
+
+    private static readonly string[] ArchitectureSuffixes = ["x86_64", "x86", "x64", "amd64", "i386", "i686", "arm64", "aarch64"];
+
+    /// <summary>
+    /// Whether the text after the last dot reads as a file type. Dots elsewhere in a binary's name
+    /// ("P.T.PC.Port.Setup-linux") or an architecture suffix ("Game.x86_64") don't make it one.
+    /// </summary>
+    private static bool HasFileTypeExtension(string name)
+    {
+        var extension = Path.GetExtension(name).TrimStart('.');
+        if (extension.Length == 0)
+            return false;
+        if (ArchitectureSuffixes.Contains(extension, StringComparer.OrdinalIgnoreCase))
+            return false;
+        return extension.All(char.IsAsciiLetterOrDigit);
     }
 
     /// <summary>
@@ -217,7 +234,9 @@ public static class GameInstallationService
         Directory.CreateDirectory(gamePath);
 
         var effectiveName = assetName;
-        if (!HasRecognizedInstallExtension(effectiveName) && !IsSingleFileExecutableAsset(effectiveName))
+        // Names like LADXHD.Patcher-Lite-Windows are archives and P.T.PC.Port.Setup-linux is a binary,
+        // so anything without a known extension is checked for an archive before being kept as one file.
+        if (!HasRecognizedInstallExtension(effectiveName))
         {
             var detected = DetectArchiveExtensionFromFile(downloadPath);
             if (!string.IsNullOrEmpty(detected))
