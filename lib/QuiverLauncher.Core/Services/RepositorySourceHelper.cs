@@ -1,3 +1,5 @@
+using System.Text.RegularExpressions;
+
 namespace QuiverLauncher.Core.Services
 {
     public static class RepositorySourceHelper
@@ -74,13 +76,23 @@ namespace QuiverLauncher.Core.Services
         /// Case-insensitive substring match for a per-app release asset filter.
         /// Empty/whitespace filters match every asset.
         /// </summary>
+        /// <summary>
+        /// Plain text matches anywhere in the file name. With * (any text) or ? (one character)
+        /// the pattern must match the whole name, so *portable*x64* picks release_portable_1.0_x64.zip.
+        /// </summary>
         public static bool AssetNameMatchesFilter(string? assetName, string? releaseAssetFilter)
         {
             var filter = NormalizeReleaseAssetFilter(releaseAssetFilter);
             if (filter == null)
                 return true;
 
-            return (assetName ?? string.Empty).Contains(filter, StringComparison.OrdinalIgnoreCase);
+            var name = assetName ?? string.Empty;
+            if (filter.IndexOfAny(['*', '?']) < 0)
+                return name.Contains(filter, StringComparison.OrdinalIgnoreCase);
+
+            var pattern = "^" + Regex.Escape(filter).Replace(@"\*", ".*").Replace(@"\?", ".") + "$";
+            return Regex.IsMatch(name, pattern, RegexOptions.IgnoreCase | RegexOptions.CultureInvariant | RegexOptions.Singleline,
+                TimeSpan.FromSeconds(1));
         }
 
         public static string? NormalizeReleaseAssetFilter(string? releaseAssetFilter)

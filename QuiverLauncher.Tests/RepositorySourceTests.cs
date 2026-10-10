@@ -178,4 +178,21 @@ public class RepositorySourceTests
         registry.Get("gitlab").Id.Should().Be(RepositorySourceIds.GitLab);
         registry.Get("gitea").Id.Should().Be(RepositorySourceIds.GitHub);
     }
+
+    [Theory]
+    [InlineData("release_portable_1.0_x64.zip", null, true)]
+    [InlineData("game-EXIT1-windows.zip", "exit1", true)]
+    [InlineData("game-EXIT2-windows.zip", "EXIT1", false)]
+    [InlineData("release_portable_1.0_x64.zip", "*portable*x64*", true)]
+    [InlineData("release_portable_2.3_X64.ZIP", "*portable*x64*", true)]
+    [InlineData("release_version_1.0_x64.zip", "*portable*x64*", false)]
+    [InlineData("release_portable_1.0_arm64.zip", "*portable*x64*", false)]
+    [InlineData("game_v1.zip", "game_v?.zip", true)]
+    [InlineData("game_v10.zip", "game_v?.zip", false)]
+    [InlineData("game(1).zip", "game(*).zip", true)]
+    [InlineData("release_portable_1.0_x64.zip", "portable*x64", false)]
+    public void Release_asset_filter_matches_text_or_wildcards(string assetName, string? filter, bool expected)
+    {
+        RepositorySourceHelper.AssetNameMatchesFilter(assetName, filter).Should().Be(expected);
+    }
 }
