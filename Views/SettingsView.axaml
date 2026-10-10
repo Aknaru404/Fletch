@@ -312,6 +312,25 @@
 													Click="ClearGamePath_Click"
 													FontSize="12"/>
 
+											<!-- Data folder: only while it sits beside the AppImage / .app -->
+											<StackPanel x:Name="DataFolderPanel" Spacing="4" Margin="0,8,0,0" IsVisible="False">
+												<TextBlock Text="QUIVER DATA FOLDER"
+														   FontSize="10" FontWeight="Bold"
+														   Foreground="{DynamicResource ThemeTextSecondary}"
+														   LetterSpacing="1"
+														   Margin="0,0,0,4"/>
+												<TextBlock x:Name="DataFolderText"
+														   FontSize="11"
+														   Foreground="{DynamicResource ThemeTextSecondary}"
+														   TextWrapping="Wrap"
+														   Margin="0,0,0,4"/>
+												<Button x:Name="MoveDataFolderButton"
+														Classes="options"
+														HorizontalAlignment="Stretch"
+														Click="MoveDataToUserFolder_Click"
+														FontSize="12"/>
+											</StackPanel>
+
 											<!-- Divider -->
 											<Border Height="1" Background="{DynamicResource ThemeBorder}" Margin="0,8,0,8"/>
 										</StackPanel>

@@ -35,6 +35,7 @@ internal static class Program
         QuiverLauncherPaths.VelopackPackageDirectoryProvider = ResolveVelopackPackageDirectory;
         if (OperatingSystem.IsWindows())
             UserDataRescue.AtStartup(ResolveVelopackRootAppDir(), AppDomain.CurrentDomain.BaseDirectory);
+        QuiverLauncherPaths.CompletePendingDataMove();
         QuiverLauncherPaths.EnsureUserDataRootExists();
 
         var launch = KioskLaunch.Parse(args);

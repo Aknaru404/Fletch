@@ -46,6 +46,7 @@ namespace QuiverLauncher
 
             // Linux/macOS: library beside AppImage / .app when that folder is writable.
             QuiverLauncherPaths.VelopackPackageDirectoryProvider = ResolveVelopackPackageDirectory;
+            QuiverLauncherPaths.CompletePendingDataMove();
 
             QuiverLauncherPaths.EnsureUserDataRootExists();
 

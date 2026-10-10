@@ -243,6 +243,55 @@ public partial class SettingsView : UserControl
     }
 
     internal bool _suppressSettingsUiEvents;
+    private void UpdateDataFolder()
+    {
+        if (DataFolderPanel == null) return;
+        DataFolderPanel.IsVisible = QuiverLauncherPaths.CanMoveDataToUserFolder;
+        if (!DataFolderPanel.IsVisible) return;
+        DataFolderText.Text = $"Settings, your library and Quiver's cache are kept next to the app in {DisplayPath(QuiverLauncherPaths.UserDataRoot)}.";
+        MoveDataFolderButton.Content = $"Move to {DisplayPath(QuiverLauncherPaths.UserFolderDataRoot)}";
+    }
+
+    private static string DisplayPath(string path)
+    {
+        var home = Environment.GetFolderPath(Environment.SpecialFolder.UserProfile);
+        return !string.IsNullOrEmpty(home) && path.StartsWith(home + Path.DirectorySeparatorChar, StringComparison.Ordinal)
+            ? "~" + path[home.Length..]
+            : path;
+    }
+
+    private async void MoveDataToUserFolder_Click(object? sender, RoutedEventArgs e)
+    {
+        if (_context == null || !QuiverLauncherPaths.CanMoveDataToUserFolder)
+            return;
+        await _session.RunAsync(async () =>
+        {
+            var appsFolder = _gameManager.GamesFolder;
+            var target = DisplayPath(QuiverLauncherPaths.UserFolderDataRoot);
+            if (!await _host.ShowMessageBoxAsync(
+                    $"Quiver will close and move its settings, library and cache to {target}. They move when you next open it.\n\n" +
+                    $"Installed apps stay in {DisplayPath(appsFolder)}.", "Move Data Folder", true) || _session.IsClosed)
+                return;
+            try
+            {
+                // The default Apps folder sits inside the data folder: keep pointing at it so installed apps stay put.
+                if (string.IsNullOrWhiteSpace(_settings.AppsPath))
+                    await Model.ChangeAppsPathAsync(appsFolder, _session.Token, debounce: false);
+                QuiverLauncherPaths.RequestMoveToUserFolder();
+            }
+            catch (Exception ex) when (!_session.IsClosed)
+            {
+                await _host.ShowMessageBoxAsync($"Couldn't prepare the move: {ex.Message}", "Error");
+                return;
+            }
+            if (Avalonia.Application.Current?.ApplicationLifetime is Avalonia.Controls.ApplicationLifetimes.IClassicDesktopStyleApplicationLifetime desktop)
+            {
+                if (desktop.MainWindow is MainWindow mainWindow) mainWindow.RequestExit();
+                else desktop.Shutdown();
+            }
+        });
+    }
+
     internal void UpdateSettingsUI()
     {
         if (_context == null)
@@ -260,6 +309,7 @@ public partial class SettingsView : UserControl
                 CustomAppListTextBox.Text = _settings.CustomAppListLocation;
             if (GamePathTextBox != null)
                 GamePathTextBox.Text = _settings.AppsPath;
+            UpdateDataFolder();
             if (LinuxWindowsLaunchCommandTextBox != null)
                 LinuxWindowsLaunchCommandTextBox.Text = _settings.LinuxWindowsLaunchCommand;
             if (BackgroundUpdateIntervalComboBox != null)
