@@ -95,8 +95,32 @@ public static class GameInstallationService
     public static bool IsWindowsInstallerAsset(string? assetName) =>
         !string.IsNullOrWhiteSpace(assetName) && assetName.EndsWith(".msi", StringComparison.OrdinalIgnoreCase);
 
+    /// <summary>A Flatpak bundle, or a zip holding one (e.g. Zelda64Recompiled-v1.2.2-Linux-Flatpak-X64.zip).</summary>
     public static bool IsFlatpakAsset(string? assetName) =>
-        !string.IsNullOrWhiteSpace(assetName) && assetName.EndsWith(".flatpak", StringComparison.OrdinalIgnoreCase);
+        !string.IsNullOrWhiteSpace(assetName) && (assetName.EndsWith(".flatpak", StringComparison.OrdinalIgnoreCase) ||
+            IsZippedFlatpakAsset(assetName));
+
+    public static bool IsZippedFlatpakAsset(string? assetName) =>
+        !string.IsNullOrWhiteSpace(assetName) && assetName.EndsWith(".zip", StringComparison.OrdinalIgnoreCase) &&
+        assetName.Contains("flatpak", StringComparison.OrdinalIgnoreCase);
+
+    /// <summary>Extracts the one .flatpak bundle in <paramref name="zipPath"/> into <paramref name="destinationDirectory"/>.</summary>
+    public static string ExtractZippedFlatpak(string zipPath, string destinationDirectory)
+    {
+        using var archive = ZipFile.OpenRead(zipPath);
+        var bundles = archive.Entries
+            .Where(entry => entry.Name.EndsWith(".flatpak", StringComparison.OrdinalIgnoreCase))
+            .ToList();
+        if (bundles.Count != 1)
+            throw new InvalidOperationException(bundles.Count == 0
+                ? $"'{Path.GetFileName(zipPath)}' doesn't contain a Flatpak bundle."
+                : $"'{Path.GetFileName(zipPath)}' contains more than one Flatpak bundle.");
+
+        Directory.CreateDirectory(destinationDirectory);
+        var bundlePath = Path.Combine(destinationDirectory, bundles[0].Name);
+        bundles[0].ExtractToFile(bundlePath, overwrite: true);
+        return bundlePath;
+    }
 
     public static bool IsAppImageAsset(string? assetName)
         => !string.IsNullOrWhiteSpace(assetName)

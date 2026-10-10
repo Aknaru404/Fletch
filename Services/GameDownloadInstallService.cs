@@ -313,7 +313,10 @@ public static class GameDownloadInstallService
                 if (GameInstallationService.IsFlatpakAsset(effectiveAssetName))
                 {
                     game.IsInstallIndeterminate = true;
-                    await flatpakService.InstallAsync(downloadPath, latestRelease.tag_name, gamePath,
+                    var bundlePath = GameInstallationService.IsZippedFlatpakAsset(effectiveAssetName)
+                        ? GameInstallationService.ExtractZippedFlatpak(downloadPath, Path.Combine(stagingDir!, "flatpak"))
+                        : downloadPath;
+                    await flatpakService.InstallAsync(bundlePath, latestRelease.tag_name, gamePath,
                         game.GameManager?.Games.Where(other => other != game && !string.IsNullOrWhiteSpace(other.FolderName))
                             .Select(other => other.GetInstallPath(gamesFolder))).ConfigureAwait(false);
                     game.IsFlatpak = true;

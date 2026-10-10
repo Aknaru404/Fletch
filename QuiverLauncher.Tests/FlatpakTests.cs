@@ -39,6 +39,11 @@ public sealed class FlatpakTests : IDisposable
     [InlineData("game.flatpak", "Windows", false)]
     [InlineData("game.flatpak", "Android", false)]
     [InlineData("game.flatpak", "macOS", false)]
+    [InlineData("Zelda64Recompiled-v1.2.2-Linux-Flatpak-X64.zip", "Linux-X64", true)]
+    [InlineData("Goemon64Recompiled-Flatpak-X64-Release.zip", "Linux-X64", true)]
+    [InlineData("Goemon64Recompiled-Flatpak-X64-Release.zip", "Linux-ARM64", false)]
+    [InlineData("Goemon64Recompiled-Flatpak-X64-Release.zip", "Windows", false)]
+    [InlineData("Goemon64Recompiled-Flatpak-X64-Release.zip", "macOS", false)]
     public void Bundle_platform_detection(string asset, string platform, bool matches)
     {
         PlatformAssetMatcher.MatchesPlatform(asset, platform).Should().Be(matches);
@@ -47,11 +52,11 @@ public sealed class FlatpakTests : IDisposable
     }
 
     [Fact]
-    public void Bundle_support_does_not_expose_references_or_wrapped_bundles()
+    public void Bundle_support_exposes_bundles_and_zipped_bundles_but_not_references()
     {
         var release = new GitHubRelease { assets = [new() { name = "app.flatpak" }, new() { name = "app.flatpakref" },
             new() { name = "app.flatpakrepo" }, new() { name = "app-flatpak.zip" }, new() { name = "app.flatpak.sha256" }] };
-        GitHubReleaseService.GetDownloadableAssets(release).Select(a => a.name).Should().Equal("app.flatpak");
+        GitHubReleaseService.GetDownloadableAssets(release).Select(a => a.name).Should().Equal("app.flatpak", "app-flatpak.zip");
         DownloadAssetPolicy.Select(release, "Windows").Uncertain.Should().BeEmpty();
     }
 
@@ -270,6 +275,36 @@ public sealed class FlatpakTests : IDisposable
     }
 
     [Fact]
+    public async Task Download_workflow_installs_the_bundle_inside_a_zip()
+    {
+        var game = new GameInfo { Name = "Game", FolderName = "game", Repository = "flatpak/" + Guid.NewGuid() };
+        using var zip = new MemoryStream();
+        using (var archive = new System.IO.Compression.ZipArchive(zip, System.IO.Compression.ZipArchiveMode.Create, leaveOpen: true))
+        await using (var entry = archive.CreateEntry("io.github.example.Game.flatpak").Open())
+            entry.Write([1, 2, 3]);
+        using var client = new HttpClient(new BundleDownload(zip.ToArray()));
+        var dialogs = new RecordingDialogs();
+        await GameDownloadInstallService.DownloadAndInstallAsync(game, client, _root, Release("v1", "Game-Linux-Flatpak-X64.zip"),
+            new AppSettings { Platform = TargetOS.LinuxX64 }, GameStatus.NotInstalled, dialogs, Service(), releaseMode: ReleaseInstallMode.ExplicitRelease);
+        dialogs.Error.Should().BeNull();
+        game.IsFlatpak.Should().BeTrue();
+        game.Status.Should().Be(GameStatus.Installed);
+        Path.GetFileName(_bundles.ReadPath).Should().Be("io.github.example.Game.flatpak");
+        _bundles.ReadBytes.Should().Equal(1, 2, 3);
+    }
+
+    [Fact]
+    public void A_zip_without_a_bundle_is_refused()
+    {
+        var zipPath = Path.Combine(_root, "empty-flatpak.zip");
+        Directory.CreateDirectory(_root);
+        using (var archive = System.IO.Compression.ZipFile.Open(zipPath, System.IO.Compression.ZipArchiveMode.Create))
+            archive.CreateEntry("README.txt");
+        var act = () => GameInstallationService.ExtractZippedFlatpak(zipPath, Path.Combine(_root, "out"));
+        act.Should().Throw<InvalidOperationException>().WithMessage("*doesn't contain a Flatpak bundle*");
+    }
+
+    [Fact]
     public async Task Availability_is_checked_before_downloading_bundle_bytes()
     {
         _bundles.Error = new InvalidOperationException(FlatpakService.SetupGuidance);
@@ -366,13 +401,13 @@ public sealed class FlatpakTests : IDisposable
         assets = [new() { name = asset, browser_download_url = "https://example.test/" + asset }]
     };
 
-    private sealed class BundleDownload : HttpMessageHandler
+    private sealed class BundleDownload(byte[]? body = null) : HttpMessageHandler
     {
         public int Requests;
         protected override Task<HttpResponseMessage> SendAsync(HttpRequestMessage request, CancellationToken cancellationToken)
         {
             Requests++;
-            return Task.FromResult(new HttpResponseMessage(System.Net.HttpStatusCode.OK) { Content = new ByteArrayContent([1, 2, 3]) });
+            return Task.FromResult(new HttpResponseMessage(System.Net.HttpStatusCode.OK) { Content = new ByteArrayContent(body ?? [1, 2, 3]) });
         }
     }
 
@@ -392,10 +427,12 @@ public sealed class FlatpakTests : IDisposable
         public FlatpakReceipt Receipt = new("io.github.example.Game", "x86_64", "stable", new string('a', 64), "v1");
         public Exception? Error;
         public string? ReadPath;
+        public byte[]? ReadBytes;
         public void CheckAvailable() { if (Error != null) throw Error; }
         public FlatpakReceipt Read(string path, string releaseTag)
         {
             ReadPath = path;
+            ReadBytes = File.Exists(path) ? File.ReadAllBytes(path) : null;
             return Receipt with { ReleaseTag = releaseTag };
         }
     }
