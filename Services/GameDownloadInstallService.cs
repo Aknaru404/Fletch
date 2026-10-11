@@ -366,11 +366,17 @@ public static class GameDownloadInstallService
                             latestRelease.tag_name).ConfigureAwait(false);
                     }
 
+                    // A folder the player located isn't Quiver's to clear: it can hold their other AppImages and
+                    // other library apps, whose installs then share its record of the installed file.
+                    var sharedFolder = !string.IsNullOrWhiteSpace(game.InstallPath);
+                    var folderHasOtherApps = LocatedInstallRemoval.FolderHasOtherApps(game, game.GameManager?.Games, gamesFolder);
                     var baseOptions = game.GetInstallationOptions();
                     var installOptions = new GameInstallationOptions
                     {
                         Log = baseOptions.Log,
                         AdditionalMetadataFileNames = baseOptions.AdditionalMetadataFileNames,
+                        IsSharedFolder = sharedFolder || folderHasOtherApps,
+                        PreviousInstallFileName = folderHasOtherApps ? null : InstalledBuild.Read(gamePath)?.FileName,
                         ExtractProgress = new Progress<double>(p =>
                         {
                             game.DownloadProgress = 90 + (Math.Clamp(p, 0, 1) * 9);

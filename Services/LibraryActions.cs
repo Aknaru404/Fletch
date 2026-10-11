@@ -228,6 +228,12 @@ public sealed class LibraryActions
                 return;
             }
 
+            if (!string.IsNullOrWhiteSpace(game.InstallPath))
+            {
+                await RemoveFromLocatedFolderAsync(game);
+                return;
+            }
+
             var confirmMessage = PlatformCapabilities.IsMobile ? $"Are you sure you want to uninstall {game.Name} from this device?" : $"Are you sure you want to delete {game.Name}?\n\n" + "Quiver Launcher will attempt to move game files to your system's Recycle Bin / Trash so you can restore them if needed. " + "Portable installs may include save data in the same folder.";
             var result = await ShowMessageBoxAsync(confirmMessage, "Confirm Deletion", isQuestion: true, preferCancelDefault: true);
             if (result && !_session.IsClosed)
@@ -260,6 +266,35 @@ public sealed class LibraryActions
                 }
             }
         });
+    }
+
+    private async Task RemoveFromLocatedFolderAsync(GameInfo game)
+    {
+        var folder = game.InstallPath!;
+        if (!await ShowMessageBoxAsync($"Delete {game.Name}?\n\nYou chose its folder, {folder}, so Quiver Launcher leaves the folder " +
+            "and your other files in it alone. Only the file Quiver Launcher downloaded there, if any, moves to the Recycle Bin / Trash, " +
+            "and Quiver Launcher stops using the folder.", "Confirm Deletion", isQuestion: true, preferCancelDefault: true) || _session.IsClosed)
+            return;
+
+        game.IsLoading = true;
+        try
+        {
+            var folderHasOtherApps = LocatedInstallRemoval.FolderHasOtherApps(game, _gameManager.Games, _gameManager.GamesFolder);
+            await Task.Run(() => LocatedInstallRemoval.Remove(folder, folderHasOtherApps, RecycleBinHelper.MoveToRecycleBin));
+            game.InstallPath = null;
+            await _libraryPersistence.SaveInstallLocationAsync(game);
+            TrackUninstalled(game);
+        }
+        catch (Exception ex)
+        {
+            _ = _session.RunAsync(() => ShowMessageBoxAsync($"Failed to delete {game.Name}: {ex.Message}", "Deletion Failed"));
+        }
+        finally
+        {
+            game.IsLoading = false;
+            await game.CheckStatusAsync(_gameManager.HttpClient, _gameManager.GamesFolder);
+            Changed();
+        }
     }
 
     private static void TrackUninstalled(GameInfo game) => Telemetry.Current.Track("app_uninstalled", Telemetry.AppRef(game));

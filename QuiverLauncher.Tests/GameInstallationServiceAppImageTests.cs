@@ -139,6 +139,108 @@ public class GameInstallationServiceAppImageTests
     }
 
     [Fact]
+    public async Task InstallOrUpdateGameAsync_keeps_other_appimages_in_a_shared_folder()
+    {
+        var downloadPath = Path.Combine(Path.GetTempPath(), $"{Guid.NewGuid():N}.AppImage");
+        var gamePath = Path.Combine(Path.GetTempPath(), Guid.NewGuid().ToString("N"));
+        var launcher = Path.Combine(gamePath, "QuiverLauncher-x86_64.AppImage");
+        var otherApp = Path.Combine(gamePath, "OtherRecomp.AppImage");
+        var playersCopy = Path.Combine(gamePath, "Zelda64Recompiled-1.0.AppImage");
+        var selectedPath = Path.Combine(gamePath, "selected_executable.txt");
+
+        try
+        {
+            Directory.CreateDirectory(gamePath);
+            foreach (var file in new[] { launcher, otherApp, playersCopy })
+                await File.WriteAllBytesAsync(file, [1]);
+            await File.WriteAllTextAsync(selectedPath, playersCopy);
+            await File.WriteAllBytesAsync(downloadPath, [2]);
+
+            await GameInstallationService.InstallOrUpdateGameAsync(
+                downloadPath,
+                gamePath,
+                "Zelda64Recompiled-1.1.AppImage",
+                "v1.1.0",
+                new GameInstallationOptions { IsSharedFolder = true });
+
+            var installedPath = Path.Combine(gamePath, "Zelda64Recompiled-1.1.AppImage");
+            File.Exists(installedPath).Should().BeTrue();
+            File.Exists(launcher).Should().BeTrue();
+            File.Exists(otherApp).Should().BeTrue();
+            File.Exists(playersCopy).Should().BeTrue("Quiver didn't install it, so it isn't Quiver's to delete");
+            (await File.ReadAllTextAsync(selectedPath)).Trim().Should().Be(Path.GetFullPath(installedPath));
+        }
+        finally
+        {
+            Cleanup(downloadPath, gamePath);
+        }
+    }
+
+    [Fact]
+    public async Task InstallOrUpdateGameAsync_replaces_only_the_previously_installed_appimage_in_a_shared_folder()
+    {
+        var downloadPath = Path.Combine(Path.GetTempPath(), $"{Guid.NewGuid():N}.AppImage");
+        var gamePath = Path.Combine(Path.GetTempPath(), Guid.NewGuid().ToString("N"));
+        var launcher = Path.Combine(gamePath, "QuiverLauncher-x86_64.AppImage");
+        var previous = Path.Combine(gamePath, "Game-1.0.AppImage");
+
+        try
+        {
+            Directory.CreateDirectory(gamePath);
+            await File.WriteAllBytesAsync(launcher, [1]);
+            await File.WriteAllBytesAsync(previous, [1]);
+            await File.WriteAllBytesAsync(downloadPath, [2]);
+
+            await GameInstallationService.InstallOrUpdateGameAsync(
+                downloadPath,
+                gamePath,
+                "Game-2.0.AppImage",
+                "v2.0.0",
+                new GameInstallationOptions { IsSharedFolder = true, PreviousInstallFileName = "Game-1.0.AppImage" });
+
+            File.Exists(previous).Should().BeFalse();
+            File.Exists(launcher).Should().BeTrue();
+            var installedPath = Path.GetFullPath(Path.Combine(gamePath, "Game-2.0.AppImage"));
+            File.Exists(installedPath).Should().BeTrue();
+            // The launcher's AppImage is still there to choose from, so the new file is chosen for the player.
+            (await File.ReadAllTextAsync(Path.Combine(gamePath, "selected_executable.txt"))).Trim().Should().Be(installedPath);
+        }
+        finally
+        {
+            Cleanup(downloadPath, gamePath);
+        }
+    }
+
+    [Fact]
+    public async Task InstallOrUpdateGameAsync_keeps_a_selected_wrapper_script()
+    {
+        var downloadPath = Path.Combine(Path.GetTempPath(), $"{Guid.NewGuid():N}.AppImage");
+        var gamePath = Path.Combine(Path.GetTempPath(), Guid.NewGuid().ToString("N"));
+        var wrapper = Path.Combine(gamePath, "run-game.sh");
+        var selectedPath = Path.Combine(gamePath, "selected_executable.txt");
+
+        try
+        {
+            Directory.CreateDirectory(gamePath);
+            await File.WriteAllTextAsync(wrapper, "#!/bin/sh\n");
+            await File.WriteAllTextAsync(selectedPath, wrapper);
+            await File.WriteAllBytesAsync(downloadPath, [2]);
+
+            await GameInstallationService.InstallOrUpdateGameAsync(
+                downloadPath,
+                gamePath,
+                "Game-2.0.AppImage",
+                "v2.0.0");
+
+            (await File.ReadAllTextAsync(selectedPath)).Trim().Should().Be(wrapper);
+        }
+        finally
+        {
+            Cleanup(downloadPath, gamePath);
+        }
+    }
+
+    [Fact]
     public async Task InstallOrUpdateGameAsync_extensionless_binary_does_not_delete_sibling_appimage()
     {
         var downloadPath = Path.Combine(Path.GetTempPath(), Guid.NewGuid().ToString("N"));
