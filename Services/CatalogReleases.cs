@@ -126,6 +126,7 @@ public sealed class CatalogReleases
         app.CatalogSlug = link?.Slug;
         app.CatalogVerifiedVersion = string.IsNullOrWhiteSpace(link?.Verified?.Version) ? null : link.Verified.Version;
         app.CatalogVerifiedAt = app.CatalogVerifiedVersion == null ? null : _statusCheckedAt;
+        app.CatalogRolling = link?.Verified?.Rolling == true;
         // A newer release Quiver hasn't verified yet, so the library can say why it isn't offered.
         var latest = link?.LatestUpstream?.Version;
         app.CatalogUnverifiedVersion = string.IsNullOrWhiteSpace(latest) ||

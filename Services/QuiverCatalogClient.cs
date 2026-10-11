@@ -63,6 +63,8 @@ public sealed class QuiverCatalogLauncher
 public sealed class QuiverCatalogVerified
 {
     public string Version { get; set; } = "";
+    /// <summary>Rebuilt under the same tag (a nightly): a new build doesn't change <see cref="Version"/>.</summary>
+    public bool Rolling { get; set; }
 }
 
 /// <summary>An app in the quiverlauncher.com catalog (the REST API's App object).</summary>
