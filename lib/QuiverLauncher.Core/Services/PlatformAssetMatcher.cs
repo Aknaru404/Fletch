@@ -117,7 +117,7 @@ namespace QuiverLauncher.Core.Services
                     return false;
                 }
 
-                bool hasLinux = HasAnyOf(assetNameLower, "linux", "appimage", ".flatpak", ".deb", ".rpm", "tar.gz", "tar.xz");
+                bool hasLinux = HasAnyOf(assetNameLower, "linux", "appimage", "flatpak", ".deb", ".rpm", "tar.gz", "tar.xz");
 
                 if (!hasLinux)
                 {

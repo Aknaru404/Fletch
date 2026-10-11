@@ -66,13 +66,155 @@ public static class QuiverLauncherPaths
 
     /// <summary>
     /// Prefer a writable Velopack package directory (beside AppImage / .app); otherwise OS fallback.
+    /// A library already kept in the OS folder (~/.local/share/QuiverLauncher) wins over an empty
+    /// package directory, so a player can keep their data there (#133).
     /// </summary>
     internal static string ResolveUnixUserDataRoot(string? packageDirectory, string fallbackRoot)
     {
-        if (!string.IsNullOrWhiteSpace(packageDirectory) && IsDirectoryWritable(packageDirectory))
+        if (!string.IsNullOrWhiteSpace(packageDirectory) && ReadMoveMarker(packageDirectory) == MoveCopied &&
+            HasLibraryData(fallbackRoot))
+            return NormalizeDirectory(fallbackRoot);
+
+        if (!string.IsNullOrWhiteSpace(packageDirectory) && IsDirectoryWritable(packageDirectory) &&
+            (HasLibraryData(packageDirectory) || !HasLibraryData(fallbackRoot)))
             return NormalizeDirectory(packageDirectory);
 
         return NormalizeDirectory(fallbackRoot);
+    }
+
+    /// <summary>Whether <paramref name="directory"/> holds a Quiver library (settings or app list).</summary>
+    internal static bool HasLibraryData(string? directory) =>
+        !string.IsNullOrWhiteSpace(directory) &&
+        (File.Exists(Path.Combine(directory, "settings.json")) || File.Exists(Path.Combine(directory, "apps.json")));
+
+    /// <summary>
+    /// Files and folders Quiver keeps in its data folder. Only these move: the folder beside an
+    /// AppImage often holds other AppImages too. Installed apps (Apps) stay where they are.
+    /// </summary>
+    internal static readonly string[] MovableDataEntries =
+        ["settings.json", "apps.json", "games.json", "Cache", "Backups", "crash.log",
+            LaunchDebugReport.UserDataFileName, GamepadDebugLog.FileName];
+
+    internal const string MoveMarkerFileName = "move-data-to-user-folder";
+    private const string MoveRequested = "requested";
+    private const string MoveCopied = "copied";
+    private const string MoveStagingName = ".moving-in";
+    private const string MoveStagingCompleteName = ".complete";
+
+    /// <summary>The OS folder the data moves to: ~/.local/share/QuiverLauncher, or Application Support on macOS.</summary>
+    public static string UserFolderDataRoot => NormalizeDirectory(GetOsFallbackUserDataRoot());
+
+    /// <summary>Data is kept beside the AppImage / .app, so it can be moved to <see cref="UserFolderDataRoot"/>.</summary>
+    public static bool CanMoveDataToUserFolder
+    {
+        get
+        {
+            if (OperatingSystem.IsWindows() || OperatingSystem.IsAndroid() || !string.IsNullOrWhiteSpace(OverrideUserDataRoot))
+                return false;
+            var package = VelopackPackageDirectoryProvider?.Invoke();
+            return !string.IsNullOrWhiteSpace(package) &&
+                string.Equals(NormalizeDirectory(package), UserDataRoot, StringComparison.Ordinal) &&
+                !HasLibraryData(UserFolderDataRoot);
+        }
+    }
+
+    /// <summary>Asks for the data to move to <see cref="UserFolderDataRoot"/> the next time Quiver starts.</summary>
+    public static void RequestMoveToUserFolder() =>
+        File.WriteAllText(Path.Combine(UserDataRoot, MoveMarkerFileName), MoveRequested);
+
+    /// <summary>Finishes a move asked for with <see cref="RequestMoveToUserFolder"/>. Call before anything reads the data.</summary>
+    public static void CompletePendingDataMove()
+    {
+        if (OperatingSystem.IsWindows() || OperatingSystem.IsAndroid() || !string.IsNullOrWhiteSpace(OverrideUserDataRoot))
+            return;
+        var package = VelopackPackageDirectoryProvider?.Invoke();
+        if (string.IsNullOrWhiteSpace(package)) return;
+        try { CompletePendingDataMove(package, GetOsFallbackUserDataRoot()); }
+        catch (Exception ex) { System.Diagnostics.Debug.WriteLine($"Moving Quiver's data failed: {ex.Message}"); }
+    }
+
+    /// <summary>
+    /// Copies everything into a staging folder first and only then into place, and deletes the
+    /// originals last, so a move cut short by a crash or power loss picks up where it stopped.
+    /// Until the copy is complete the originals stay in use.
+    /// </summary>
+    internal static void CompletePendingDataMove(string packageDirectory, string targetDirectory)
+    {
+        var markerPath = Path.Combine(packageDirectory, MoveMarkerFileName);
+        var state = ReadMoveMarker(packageDirectory);
+        if (state == null) return;
+        var staging = Path.Combine(targetDirectory, MoveStagingName);
+
+        if (state == MoveRequested)
+        {
+            var stagingComplete = File.Exists(Path.Combine(staging, MoveStagingCompleteName));
+            // A library that was already there isn't Quiver's to replace: keep using the package directory.
+            if (HasLibraryData(targetDirectory) && !Directory.Exists(staging))
+            {
+                File.Delete(markerPath);
+                return;
+            }
+
+            if (!stagingComplete)
+            {
+                if (Directory.Exists(staging)) Directory.Delete(staging, recursive: true);
+                Directory.CreateDirectory(staging);
+                foreach (var name in MovableDataEntries)
+                    CopyEntry(Path.Combine(packageDirectory, name), Path.Combine(staging, name));
+                File.WriteAllText(Path.Combine(staging, MoveStagingCompleteName), "");
+            }
+
+            // Same file system as the target, so each of these is a rename.
+            foreach (var name in MovableDataEntries)
+            {
+                var staged = Path.Combine(staging, name);
+                var destination = Path.Combine(targetDirectory, name);
+                if (File.Exists(staged)) File.Move(staged, destination, overwrite: true);
+                else if (Directory.Exists(staged))
+                {
+                    if (Directory.Exists(destination)) Directory.Delete(destination, recursive: true);
+                    Directory.Move(staged, destination);
+                }
+            }
+            File.WriteAllText(markerPath, MoveCopied);
+        }
+
+        if (Directory.Exists(staging)) Directory.Delete(staging, recursive: true);
+        foreach (var name in MovableDataEntries)
+        {
+            var original = Path.Combine(packageDirectory, name);
+            if (File.Exists(original)) File.Delete(original);
+            else if (Directory.Exists(original)) Directory.Delete(original, recursive: true);
+        }
+        File.Delete(markerPath);
+    }
+
+    private static string? ReadMoveMarker(string directory)
+    {
+        try
+        {
+            var path = Path.Combine(directory, MoveMarkerFileName);
+            return File.Exists(path) ? File.ReadAllText(path).Trim() : null;
+        }
+        catch
+        {
+            return null;
+        }
+    }
+
+    private static void CopyEntry(string source, string destination)
+    {
+        if (File.Exists(source))
+        {
+            File.Copy(source, destination, overwrite: true);
+            return;
+        }
+        if (!Directory.Exists(source)) return;
+        Directory.CreateDirectory(destination);
+        foreach (var file in Directory.EnumerateFiles(source))
+            File.Copy(file, Path.Combine(destination, Path.GetFileName(file)), overwrite: true);
+        foreach (var directory in Directory.EnumerateDirectories(source))
+            CopyEntry(directory, Path.Combine(destination, Path.GetFileName(directory)));
     }
 
     public static string AppsJsonPath => Path.Combine(UserDataRoot, "apps.json");

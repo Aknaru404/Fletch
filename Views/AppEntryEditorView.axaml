@@ -140,7 +140,7 @@
 											   FontWeight="SemiBold"
 											   Foreground="{DynamicResource ThemeText}"/>
 									<TextBox x:Name="NewGameReleaseAssetFilterTextBox" IsVisible="{Binding ShowRepository}" Text="{Binding ReleaseAssetFilter, Mode=TwoWay}"
-											 Watermark="If this repo ships more than one game, text that appears only in this game’s filenames (e.g. EXIT1)"
+											 Watermark="If this repo ships more than one game, text that appears only in this game’s filenames (e.g. EXIT1, or *portable*x64* with wildcards)"
 											 Foreground="{DynamicResource ThemeText}"
 											 Background="{DynamicResource ThemeBase}"
 											 BorderBrush="{DynamicResource ThemeBorder}"
