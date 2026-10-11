@@ -145,6 +145,58 @@ public class GameDownloadInstallServiceTests
     }
 
     [Fact]
+    public async Task DownloadAndInstallAsync_into_a_located_appimage_folder_keeps_the_other_appimages()
+    {
+        var gamesFolder = Path.Combine(Path.GetTempPath(), Guid.NewGuid().ToString());
+        var sharedFolder = Path.Combine(Path.GetTempPath(), Guid.NewGuid().ToString());
+        Directory.CreateDirectory(gamesFolder);
+        Directory.CreateDirectory(sharedFolder);
+        var others = new[] { "QuiverLauncher-x86_64.AppImage", "OtherRecomp.AppImage", "Zelda64Recompiled.AppImage" }
+            .Select(name => Path.Combine(sharedFolder, name)).ToArray();
+
+        try
+        {
+            foreach (var file in others)
+                await File.WriteAllBytesAsync(file, [1]);
+            var release = new GitHubRelease
+            {
+                tag_name = "v1.2.0",
+                assets = [new GitHubAsset { name = "Zelda64Recompiled-1.2.0.AppImage", browser_download_url = "https://example.com/z.AppImage" }],
+            };
+            var game = new GameInfo
+            {
+                Name = "Zelda 64: Recompiled",
+                Repository = "owner/zelda64recomp",
+                FolderName = "Zelda64Recompiled",
+                InstallPath = sharedFolder,
+            };
+            var dialogs = new RecordingDialogs();
+            using var client = new HttpClient(new StubHttpMessageHandler(_ => new HttpResponseMessage(HttpStatusCode.OK)
+            {
+                Content = new ByteArrayContent([2, 2, 2]),
+            }));
+
+            await GameDownloadInstallService.DownloadAndInstallAsync(
+                game,
+                client,
+                gamesFolder,
+                release,
+                new AppSettings { Platform = QuiverLauncher.Core.Models.TargetOS.LinuxX64 },
+                GameStatus.UpdateAvailable,
+                dialogs, releaseMode: ReleaseInstallMode.ExplicitRelease);
+
+            dialogs.LastError.Should().BeNull("install failed with: {0}", dialogs.LastError);
+            File.Exists(Path.Combine(sharedFolder, "Zelda64Recompiled-1.2.0.AppImage")).Should().BeTrue();
+            others.Should().OnlyContain(file => File.Exists(file));
+        }
+        finally
+        {
+            Directory.Delete(gamesFolder, true);
+            Directory.Delete(sharedFolder, true);
+        }
+    }
+
+    [Fact]
     public async Task DownloadAndInstallAsync_resets_status_when_release_has_no_assets()
     {
         var gamesFolder = Path.Combine(Path.GetTempPath(), Guid.NewGuid().ToString());

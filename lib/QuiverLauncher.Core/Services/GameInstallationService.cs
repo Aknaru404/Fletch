@@ -127,10 +127,11 @@ public static class GameInstallationService
            && assetName.EndsWith(".appimage", StringComparison.OrdinalIgnoreCase);
 
     /// <summary>
-    /// After a successful AppImage install, delete other top-level <c>.AppImage</c> files
-    /// left behind by versioned release names. Does not recurse, and does not fail the update
-    /// if a stale file is locked. Retargets <c>selected_executable.txt</c> when it points at
-    /// a missing path.
+    /// After a successful AppImage install, delete the AppImages it replaces: in a folder Quiver made for the app,
+    /// every other top-level <c>.AppImage</c> left behind by versioned release names; in a shared folder, only the
+    /// file Quiver last installed the app from. Does not recurse, and does not fail the update if a stale file is
+    /// locked. Points <c>selected_executable.txt</c> at the new file when it named a missing path or another
+    /// top-level AppImage, or when other AppImages remain beside it.
     /// </summary>
     public static void RemoveStaleAppImages(string gamePath, string keepPath, GameInstallationOptions? options = null)
     {
@@ -144,11 +145,8 @@ public static class GameInstallationService
 
         var keepFullPath = Path.GetFullPath(keepPath);
 
-        foreach (var file in Directory.GetFiles(gamePath, "*", SearchOption.TopDirectoryOnly))
+        foreach (var file in StaleAppImages(gamePath, options))
         {
-            if (!IsAppImageAsset(file))
-                continue;
-
             if (string.Equals(Path.GetFullPath(file), keepFullPath, StringComparison.OrdinalIgnoreCase))
                 continue;
 
@@ -162,20 +160,43 @@ public static class GameInstallationService
             }
         }
 
-        RetargetSelectedExecutableIfStale(gamePath, keepFullPath, options);
+        RetargetSelectedExecutable(gamePath, keepFullPath, options);
     }
 
-    static void RetargetSelectedExecutableIfStale(string gamePath, string keepPath, GameInstallationOptions options)
+    static IEnumerable<string> StaleAppImages(string gamePath, GameInstallationOptions options)
+    {
+        if (!options.IsSharedFolder)
+            return TopLevelAppImages(gamePath);
+
+        // A shared folder can hold the player's other AppImages, Quiver's own among them.
+        var previous = Path.GetFileName(options.PreviousInstallFileName ?? string.Empty);
+        return IsAppImageAsset(previous) ? [Path.Combine(gamePath, previous)] : [];
+    }
+
+    static IEnumerable<string> TopLevelAppImages(string gamePath) =>
+        Directory.GetFiles(gamePath, "*", SearchOption.TopDirectoryOnly).Where(file => IsAppImageAsset(file));
+
+    static void RetargetSelectedExecutable(string gamePath, string keepPath, GameInstallationOptions options)
     {
         var selectedPath = Path.Combine(gamePath, "selected_executable.txt");
-        if (!File.Exists(selectedPath))
-            return;
 
         try
         {
-            var saved = File.ReadAllText(selectedPath).Trim();
-            if (!string.IsNullOrEmpty(saved) && File.Exists(saved))
+            var saved = File.Exists(selectedPath) ? File.ReadAllText(selectedPath).Trim() : string.Empty;
+            if (saved.Length > 0 && File.Exists(saved))
+            {
+                // A wrapper script or another chosen program stays; an older AppImage beside the new one doesn't.
+                var savedFolder = Path.GetDirectoryName(Path.GetFullPath(saved));
+                if (!IsAppImageAsset(saved) || !string.Equals(Path.TrimEndingDirectorySeparator(savedFolder ?? string.Empty),
+                        Path.TrimEndingDirectorySeparator(Path.GetFullPath(gamePath)), StringComparison.OrdinalIgnoreCase))
+                    return;
+            }
+            else if (!File.Exists(selectedPath) && !TopLevelAppImages(gamePath).Any(file =>
+                         !string.Equals(Path.GetFullPath(file), keepPath, StringComparison.OrdinalIgnoreCase)))
+            {
+                // Nothing chosen and nothing else to choose from: launching finds the new file on its own.
                 return;
+            }
 
             File.WriteAllText(selectedPath, keepPath);
         }
