@@ -533,6 +533,7 @@ public static class GameInstallationService
         return fileName.Equals("version.txt", StringComparison.OrdinalIgnoreCase) ||
                fileName.Equals(IncompleteInstallFileName, StringComparison.OrdinalIgnoreCase) ||
                fileName.Equals("LastPlayed.txt", StringComparison.OrdinalIgnoreCase) ||
+               fileName.Equals("installed-build.txt", StringComparison.OrdinalIgnoreCase) ||
                fileName.Equals("selected_executable.txt", StringComparison.OrdinalIgnoreCase) ||
                fileName.Equals("flatpak-install.json", StringComparison.OrdinalIgnoreCase) ||
                fileName.Equals("flatpak-install.pending.json", StringComparison.OrdinalIgnoreCase) ||

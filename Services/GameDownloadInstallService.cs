@@ -134,7 +134,9 @@ public static class GameDownloadInstallService
             else if (!reinstall && !GameInstallationService.IsWindowsInstallerAsset(asset.name) && !WindowsInstallerService.HasReceipt(gamePath) && oldFlatpak == null && File.Exists(versionFile) &&
                 (OperatingSystem.IsAndroid() || GameInstallationService.HasCompletePortableInstallation(
                     gamePath, game.GetInstallationOptions())) &&
-                (await File.ReadAllTextAsync(versionFile).ConfigureAwait(false)).Trim() == latestRelease.tag_name)
+                (await File.ReadAllTextAsync(versionFile).ConfigureAwait(false)).Trim() == latestRelease.tag_name &&
+                // A rolling release rebuilt under the same tag is a new build to download.
+                InstalledBuild.Read(gamePath)?.IsRebuiltIn(latestRelease, latestRelease.tag_name) != true)
             {
                 game.Status = GameStatus.Installed;
                 game.InstalledVersion = latestRelease.tag_name;
@@ -282,8 +284,8 @@ public static class GameDownloadInstallService
 
                 // The file must be the one Quiver checked (or, outside the catalog, the one GitHub published).
                 var expected = check?.ChecksumFor(asset.name) ?? DigestOf(asset);
-                if (expected != null && await Sha256Async(downloadPath).ConfigureAwait(false) is var actual &&
-                    !string.Equals(actual, expected, StringComparison.OrdinalIgnoreCase) &&
+                var actual = await Sha256Async(downloadPath).ConfigureAwait(false);
+                if (expected != null && !string.Equals(actual, expected, StringComparison.OrdinalIgnoreCase) &&
                     // A rolling release is rebuilt under the same tag: the build GitHub publishes now is fine too.
                     !(check?.Rolling == true && string.Equals(actual, await LiveDigestAsync(game, httpClient, apiToken,
                         latestRelease.tag_name, asset.name).ConfigureAwait(false), StringComparison.OrdinalIgnoreCase)))
@@ -404,6 +406,9 @@ public static class GameDownloadInstallService
                     File.Delete(Path.Combine(gamePath, GameInstallationService.IncompleteInstallFileName));
                 }
 
+                // Which build of the tag this is, so a rebuild under the same tag is seen as an update.
+                game.InstalledBuild = new InstalledBuild(asset.name, actual);
+                await game.InstalledBuild.WriteAsync(gamePath).ConfigureAwait(false);
                 game.InstalledVersion = latestRelease.tag_name;
                 if (string.IsNullOrWhiteSpace(game.LatestVersion) ||
                     LauncherVersionService.IsNewerVersion(latestRelease.tag_name, game.LatestVersion))

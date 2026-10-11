@@ -231,8 +231,48 @@ public class ReleaseVerificationTests
         player.Errors.Should().BeEmpty();
         player.Confirmations.Should().BeEmpty();
         (app.InstalledVersion, app.Status).Should().Be(("v2", GameStatus.Installed));
+        InstalledBuild.Read(app.GetInstallPath(launcher.Manager.GamesFolder))
+            .Should().Be(new InstalledBuild(Asset, Sha256(served).ToLowerInvariant()));
         launcher.Network.Downloads.Should().Be(1);
         launcher.Network.Requests.Should().NotContain(u => u.Host == "api.github.com");
+    }
+
+    [AvaloniaTheory]
+    [InlineData(true)]
+    [InlineData(false)]
+    public async Task Rolling_release_rebuilt_under_the_same_tag_is_offered_and_installed_as_an_update(bool rebuilt)
+    {
+        using var launcher = new Launcher();
+        var repo = Repo();
+        byte[] first = Zip("nightly-1.txt"), second = Zip("nightly-2.txt");
+        // Last night's build is installed, and recorded as such.
+        var app = App("Alpha", repo, manager: launcher.Manager);
+        InstallOnDisk(app, launcher.Manager.GamesFolder, "nightly");
+        await new InstalledBuild(Asset, Sha256(first).ToLowerInvariant()).WriteAsync(app.GetInstallPath(launcher.Manager.GamesFolder));
+        var served = rebuilt ? second : first;
+        launcher.Network.Site["/release-status?limit=100"] = Page([Status("alpha", repo, "nightly", rolling: true)]);
+        launcher.Network.Site["/apps/alpha/release-history?limit=100"] = Page(
+            [History("nightly", "verified", [], [(Asset, served)], rolling: true)]);
+        launcher.Network.Files[SiteLink("nightly", Asset)] = served;
+
+        await GameStatusService.CheckStatusAsync(app, launcher.Manager.HttpClient, launcher.Manager.GamesFolder, forceUpdateCheck: true);
+
+        app.InstalledVersion.Should().Be("nightly");
+        if (!rebuilt)
+        {
+            app.Status.Should().Be(GameStatus.Installed, "the build installed is the one Quiver verified");
+            return;
+        }
+        app.Status.Should().Be(GameStatus.UpdateAvailable, "the same tag now has a new build");
+        var player = new Dialogs(confirm: true);
+        await GameDownloadInstallService.DownloadAndInstallAsync(app, launcher.Manager.HttpClient, launcher.Manager.GamesFolder,
+            null, launcher.Store.Current, GameStatus.UpdateAvailable, player);
+        player.Errors.Should().BeEmpty();
+        launcher.Network.Downloads.Should().Be(1);
+        (app.InstalledVersion, app.Status).Should().Be(("nightly", GameStatus.Installed));
+        var path = app.GetInstallPath(launcher.Manager.GamesFolder);
+        File.Exists(Path.Combine(path, "nightly-2.txt")).Should().BeTrue();
+        InstalledBuild.Read(path).Should().Be(new InstalledBuild(Asset, Sha256(second).ToLowerInvariant()));
     }
 
     [AvaloniaFact]
@@ -682,10 +722,10 @@ public class ReleaseVerificationTests
     private static string Page(object[] items, string? next = null) =>
         Json(new { items, nextCursor = next, isDone = next == null });
 
-    private static object Status(string slug, string repository, string? verified, string? latest = null) => new
+    private static object Status(string slug, string repository, string? verified, string? latest = null, bool rolling = false) => new
     {
         id = "id-" + slug, slug, provider = "github", repository,
-        verified = verified == null ? null : new { version = verified }, latestUpstream = new { version = latest ?? verified },
+        verified = verified == null ? null : new { version = verified, rolling }, latestUpstream = new { version = latest ?? verified },
     };
 
     private static object Listed(string slug, string folderName, string? releaseAssetFilter = null) =>

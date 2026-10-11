@@ -742,6 +742,13 @@ namespace QuiverLauncher.Models
         /// <summary>When quiverlauncher.com last confirmed <see cref="CatalogVerifiedVersion"/>.</summary>
         public DateTimeOffset? CatalogVerifiedAt { get; set; }
 
+        /// <summary>The verified release is rebuilt under the same tag (a nightly), so its builds are told apart by file.</summary>
+        public bool CatalogRolling { get; set; }
+
+        /// <summary>The file this app was installed from and its checksum (see <see cref="Services.InstalledBuild"/>).</summary>
+        [System.Text.Json.Serialization.JsonIgnore]
+        public InstalledBuild? InstalledBuild { get; set; }
+
         /// <summary>The release updates and installs aim for: the player's pin, else the verified release.</summary>
         public string? ReleaseTarget => string.IsNullOrWhiteSpace(PreferredVersion) ? CatalogVerifiedVersion : PreferredVersion;
 
@@ -1126,7 +1133,9 @@ namespace QuiverLauncher.Models
                 return false;
 
             if (AreVersionsEquivalent(LatestVersion, InstalledVersion))
-                return false;
+                // The same tag: an update only when it's been rebuilt (a rolling release's new build).
+                return InstalledBuild?.IsRebuiltIn(_cachedRelease, InstalledVersion) == true && !DeferUpdateTracking &&
+                    !AreVersionsEquivalent(SkippedUpdateVersion, LatestVersion);
 
             var unknownInstall = IsUnknownInstalledVersion(InstalledVersion);
 

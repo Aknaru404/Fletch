@@ -34,7 +34,9 @@ internal static class StartupVersionResolver
     internal static StartupVersionEvidence? FromCatalog(GameInfo app)
     {
         if (app.IsManuallyManaged || string.IsNullOrWhiteSpace(app.Repository) || !string.IsNullOrWhiteSpace(app.PreferredVersion) ||
-            app.CatalogVerifiedVersion is not { Length: > 0 } verified || app.CatalogVerifiedAt is not { } verifiedAt)
+            app.CatalogVerifiedVersion is not { Length: > 0 } verified || app.CatalogVerifiedAt is not { } verifiedAt ||
+            // A rolling build installed: only the release's files tell a new build, so they're read.
+            app.CatalogRolling && app.InstalledBuild != null)
             return null;
         var known = GitHubApiCache.TryGetLastKnownVersion(app.RepositorySource, app.Repository, out var last) &&
             last?.CachedRelease is { } cachedRelease && ReleaseVersionIdentity.AreVersionsEquivalent(cachedRelease.tag_name, verified)
