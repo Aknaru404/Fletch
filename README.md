@@ -230,6 +230,15 @@ If you encounter any issues or have questions:
 - Check existing issues for solutions
 - Join the [Discord server](https://discord.gg/5XRThpWHGk)
 
+## License
+
+Quiver Launcher is licensed under the [MIT License](LICENSE). It's based on
+[GithubLauncher](https://github.com/SirDiabo/GithubLauncher) by SirDiabo, also MIT licensed, and keeps its copyright
+notice.
+
+The license covers the code, not the Quiver name, logo or app icons. See [TRADEMARKS.md](TRADEMARKS.md) for how forks
+and other projects may use them.
+
 
 ## For Developers: Local Development
 
