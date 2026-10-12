@@ -2,7 +2,7 @@ using FluentAssertions;
 using Avalonia.Controls;
 using QuiverLauncher.Services;
 using QuiverLauncher.ViewModels;
-using SDL2;
+using SDL;
 
 namespace QuiverLauncher.Tests;
 
@@ -15,14 +15,14 @@ public class InputBindingsViewModelTests
         var input = new Input();
         using var model = new InputBindingsViewModel(new SettingsViewModel(store), () => input, action => action());
         model.ListenForGamepad(GamepadAction.Confirm);
-        input.Send(GamepadBinding.Button(SDL.SDL_GameControllerButton.SDL_CONTROLLER_BUTTON_B));
+        input.Send(GamepadBinding.Button(SDL_GamepadButton.SDL_GAMEPAD_BUTTON_EAST));
         store.Current.GamepadBindings[GamepadAction.Cancel].Should().BeEmpty();
         model.Rows.Single(r => r.Action == GamepadAction.Cancel).GamepadLabel.Should().Be("—");
         var restored = System.Text.Json.JsonSerializer.Deserialize<AppSettings>(System.Text.Json.JsonSerializer.Serialize(store.Current))!;
         restored.EnsureInitialized();
         GamepadBindingDefaults.Clone(restored.GamepadBindings)[GamepadAction.Cancel].Should().BeEmpty();
         model.ListenForGamepad(GamepadAction.Cancel);
-        input.Send(GamepadBinding.Button(SDL.SDL_GameControllerButton.SDL_CONTROLLER_BUTTON_A));
+        input.Send(GamepadBinding.Button(SDL_GamepadButton.SDL_GAMEPAD_BUTTON_SOUTH));
         model.Rows.Single(r => r.Action == GamepadAction.Confirm).GamepadLabel.Should().Be("B");
         model.Rows.Single(r => r.Action == GamepadAction.Cancel).GamepadLabel.Should().Be("A");
 
@@ -68,7 +68,7 @@ public class InputBindingsViewModelTests
             button.Content.Should().Be("Listening…");
             button.IsFocused.Should().BeTrue();
             navigation.CollectSettingsFocusableControls()[navigation.FocusIndex].Should().BeSameAs(button);
-            if (gamepad) input.Send(GamepadBinding.Button(SDL.SDL_GameControllerButton.SDL_CONTROLLER_BUTTON_X));
+            if (gamepad) input.Send(GamepadBinding.Button(SDL_GamepadButton.SDL_GAMEPAD_BUTTON_WEST));
             else model.CaptureKeyboard(new KeyboardBinding(Avalonia.Input.Key.F8));
             Avalonia.Threading.Dispatcher.UIThread.RunJobs(); window.UpdateLayout();
             button.Content.Should().Be("Rebind");
@@ -106,13 +106,13 @@ public class InputBindingsViewModelTests
         var queued = new Queue<Action>();
         using var model = new InputBindingsViewModel(new SettingsViewModel(store), () => input, queued.Enqueue);
         model.ListenForGamepad(GamepadAction.Confirm);
-        input.Send(GamepadBinding.Button(SDL.SDL_GameControllerButton.SDL_CONTROLLER_BUTTON_X));
+        input.Send(GamepadBinding.Button(SDL_GamepadButton.SDL_GAMEPAD_BUTTON_WEST));
         model.Cancel();
         model.ListenForGamepad(GamepadAction.Options);
         queued.Dequeue()();
         store.Saves.Should().Be(0);
         model.ListeningGamepad.Should().Be(GamepadAction.Options);
-        input.Send(GamepadBinding.Button(SDL.SDL_GameControllerButton.SDL_CONTROLLER_BUTTON_X));
+        input.Send(GamepadBinding.Button(SDL_GamepadButton.SDL_GAMEPAD_BUTTON_WEST));
         queued.Dequeue()();
         store.Saves.Should().Be(1);
         model.IsListening.Should().BeFalse();
@@ -127,11 +127,11 @@ public class InputBindingsViewModelTests
         var queued = new Queue<Action>();
         var model = new InputBindingsViewModel(new SettingsViewModel(store), () => input, queued.Enqueue);
         model.ListenForGamepad(GamepadAction.Confirm);
-        input.Send(GamepadBinding.Button(SDL.SDL_GameControllerButton.SDL_CONTROLLER_BUTTON_X));
+        input.Send(GamepadBinding.Button(SDL_GamepadButton.SDL_GAMEPAD_BUTTON_WEST));
         model.Dispose();
         model.Dispose();
         queued.Dequeue()();
-        input.Send(GamepadBinding.Button(SDL.SDL_GameControllerButton.SDL_CONTROLLER_BUTTON_Y));
+        input.Send(GamepadBinding.Button(SDL_GamepadButton.SDL_GAMEPAD_BUTTON_NORTH));
         queued.Should().BeEmpty();
         store.Saves.Should().Be(0);
         input.Capturing.Should().BeFalse();
