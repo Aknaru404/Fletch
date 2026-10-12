@@ -158,6 +158,7 @@
 			Background="{DynamicResource ThemeBase}">
 		<!-- The whole page scrolls, as in Quiver Launcher 4: the app's header, its tabs, then the open section. -->
 		<ScrollViewer x:Name="BrowseDetailsScrollViewer"
+					  BringIntoViewOnFocusChange="False"
 					  VerticalScrollBarVisibility="Auto"
 					  HorizontalScrollBarVisibility="Disabled">
 			<StackPanel>

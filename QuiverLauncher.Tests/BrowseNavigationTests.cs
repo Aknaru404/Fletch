@@ -3,12 +3,14 @@ using System.Reflection;
 using System.Text;
 using Avalonia;
 using Avalonia.Controls;
+using Avalonia.Headless;
 using Avalonia.Headless.XUnit;
 using Avalonia.Interactivity;
 using Avalonia.Threading;
 using Avalonia.VisualTree;
 using FluentAssertions;
 using QuiverLauncher.Services;
+using QuiverLauncher.ViewModels;
 using QuiverLauncher.Views;
 
 namespace QuiverLauncher.Tests;
@@ -198,6 +200,93 @@ public class BrowseNavigationTests
         }
     }
 
+    [AvaloniaTheory]
+    [InlineData(false)]
+    [InlineData(true)]
+    public async Task Switching_away_and_back_keeps_the_app_page_where_it_was_scrolled(bool controller)
+    {
+        var root = Path.Combine(Path.GetTempPath(), "quiver-browse-refocus-" + Guid.NewGuid().ToString("N"));
+        var previousRoot = QuiverLauncherPaths.OverrideUserDataRoot;
+        Directory.CreateDirectory(root);
+        QuiverLauncherPaths.OverrideUserDataRoot = root;
+        var store = new Store();
+        store.Current.AppsPath = Path.Combine(root, "Apps");
+        using var http = new HttpClient(new Site());
+        var manager = new GameManager(store, http) { UiThreadInvoker = action => Dispatcher.UIThread.InvokeAsync(action).GetTask() };
+        var view = new MainView(new() { SettingsStore = store, GameManager = manager, InitializeOnOpen = false, EnableInput = false, EnableMusic = false });
+        // Short, so the page scrolls.
+        var window = new Window { Content = view, Width = 1280, Height = 480 };
+        var browse = view.FindControl<BrowseView>("BrowsePanel")!;
+        var details = view.FindControl<BrowseDetailsView>("BrowseDetailsPanel")!;
+        var scroll = details.BrowseDetailsScrollViewer;
+        try
+        {
+            window.Show(); Dispatcher.UIThread.RunJobs();
+            GamepadFocusChrome.SetKeyboardNavigationActive(controller);
+            view.FindControl<Button>("BrowseNavButton")!.RaiseEvent(new RoutedEventArgs(Button.ClickEvent));
+            await Until(() => browse.Model.Items.Count == 3);
+            if (controller)
+            {
+                Shell(view, "HandleConfirmAction");
+                await Until(() => details.BrowseDetailsAddButton.IsVisible);
+            }
+            else
+            {
+                typeof(MainView).GetMethod("OpenBrowseDetails", BindingFlags.Instance | BindingFlags.NonPublic, [typeof(BrowseItem), typeof(bool)])!
+                    .Invoke(view, [browse.Model.Items[0], false]);
+                await Until(() => details.BrowseDetailsAddButton.IsVisible);
+                window.UpdateLayout();
+                // Clicking a tab leaves it with keyboard focus, as on Windows.
+                var tab = details.BrowseDetailsOverviewTab;
+                var at = tab.TranslatePoint(new Point(tab.Bounds.Width / 2, tab.Bounds.Height / 2), window)!.Value;
+                window.MouseDown(at, Avalonia.Input.MouseButton.Left);
+                window.MouseUp(at, Avalonia.Input.MouseButton.Left);
+                tab.IsFocused.Should().BeTrue();
+            }
+            await Until(() => { window.UpdateLayout(); return scroll.Extent.Height > scroll.Viewport.Height * 3; });
+            if (controller)
+            {
+                // Down past the last row reads the page: nothing is highlighted, and the page scrolls.
+                for (var i = 0; i < 20 && !details.BodyFocused; i++) Shell(view, "HandleGamepadNavigation", NavigationDirection.Down);
+                details.BodyFocused.Should().BeTrue();
+            }
+            scroll.Offset = new Vector(0, scroll.Extent.Height - scroll.Viewport.Height);
+            window.UpdateLayout();
+            var offset = scroll.Offset;
+
+            // Alt+Tab away and back: the window loses keyboard focus, then Avalonia refocuses what had it.
+            var impl = typeof(TopLevel).GetProperty("PlatformImpl")!.GetValue(window)!;
+            ((Action?)impl.GetType().GetProperty("Deactivated")!.GetValue(impl))?.Invoke();
+            ((Action?)impl.GetType().GetProperty("LostFocus")!.GetValue(impl))!.Invoke();
+            window.FocusManager!.GetFocusedElement().Should().BeNull();
+            view.HandleDeactivated();
+            window.Activate();
+            Dispatcher.UIThread.RunJobs();
+            view.HandleActivated();
+            Dispatcher.UIThread.RunJobs();
+            window.UpdateLayout();
+
+            scroll.Offset.Should().Be(offset);
+            if (!controller)
+            {
+                // Tab still brings the control it reaches into view.
+                window.KeyPress(Avalonia.Input.Key.Tab, Avalonia.Input.RawInputModifiers.None, Avalonia.Input.PhysicalKey.Tab, null);
+                window.UpdateLayout();
+                details.BrowseDetailsReleasesTab.IsFocused.Should().BeTrue();
+                scroll.Offset.Y.Should().BeLessThan(offset.Y);
+            }
+        }
+        finally
+        {
+            window.Close();
+            await view.ShutdownAsync();
+            manager.Dispose();
+            GamepadFocusChrome.SetKeyboardNavigationActive(false);
+            QuiverLauncherPaths.OverrideUserDataRoot = previousRoot;
+            TestFixtures.CleanupDirectory(root);
+        }
+    }
+
     private static object? Shell(MainView view, string method, params object[] args) =>
         typeof(MainView).GetMethod(method, BindingFlags.Instance | BindingFlags.NonPublic)!.Invoke(view, args);
 
@@ -241,6 +330,8 @@ public class BrowseNavigationTests
                 "/api/v1/apps" => $$"""{"items":[{{App("2ship", "2 Ship 2 Harkinian", "MajorasMask-2Ship")}},{{App("starship", "Starship", "StarFox64-Starship")}},{{App("zelda", "Zelda 64 Recompiled", "Zelda64")}}],"nextCursor":null,"isDone":true}""",
                 "/api/v1/apps/2ship" => $$"""{"entry":{{App("2ship", "2 Ship 2 Harkinian", "MajorasMask-2Ship")}},"project":{"provider":"github","repository":"HarbourMasters/2ship2harkinian"},"withdrawn":[]}""",
                 "/api/v1/apps/starship" => $$"""{"entry":{{App("starship", "Starship", "StarFox64-Starship")}},"project":{"provider":"github","repository":"sonicdcer/Starship"},"withdrawn":[]}""",
+                // A README long enough to scroll the page well past its tabs.
+                "/api/v1/apps/2ship/readme" => $$"""{"markdown":"{{string.Concat(Enumerable.Range(1, 60).Select(i => $"Paragraph {i} of the README.\\n\\n"))}}"}""",
                 "/api/v1/apps/2ship/reviews" => """{"items":[{"author":"Player","result":"runs","body":"Smooth.","createdAt":1787680483000}],"nextCursor":null,"isDone":true}""",
                 _ => null,
             };

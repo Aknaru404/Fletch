@@ -86,7 +86,7 @@ public class ShellNavigationRouterTests
         var router = new ShellNavigationRouter(shell, navigation, handlers, () => state == "filter", () => { },
             () => throw new Exception("Unexpected main-view restoration"));
         router.RestoreCurrentFocus(bringIntoView: false);
-        features[expected].Restores.Should().ContainSingle();
+        features[expected].Restores.Should().ContainSingle().Which.Should().BeFalse();
         features[GamepadNavigationZone.Library].Restores.Should().BeEmpty();
     }
     [Fact]
