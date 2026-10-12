@@ -29,9 +29,19 @@ public static class GameDownloadService
         game.ClearDownloadSelection();
         if (release == null) return false;
         var result = Prepare(game, release, settings);
-        game.SelectedDownload = result.Automatic;
+        game.SelectedDownload = InstalledBuildIn(game, result, release) ?? result.Automatic;
         return game.SelectedDownload != null;
     }
+
+    /// <summary>
+    /// The file in <paramref name="choices"/> that is the same build as the one installed, so an update keeps the
+    /// player's build (their Linux one, not the Windows one beside it) without asking. Null when nothing is recorded
+    /// or no single file matches.
+    /// </summary>
+    public static GitHubAsset? InstalledBuildIn(GameInfo game, DownloadAssetSelection choices, GitHubRelease release) =>
+        game.InstalledBuild is { } build && game.IsInstalled
+            ? DownloadAssetPolicy.MatchInstalled(choices, build.FileName, game.InstalledVersion, release.tag_name)
+            : null;
 
     public static void SelectExplicit(GameInfo game, GitHubRelease release, AppSettings settings, GitHubAsset asset)
     {

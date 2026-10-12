@@ -237,7 +237,7 @@ public sealed class LibraryLaunchController
         {
             GameDownloadService.SelectExplicit(game, release, _settings, asset);
             await game.PerformActionAsync(_gameManager.HttpClient, _gameManager.GamesFolder, _settings);
-        })) contextMenu.Items.Add(item);
+        }, GameDownloadService.InstalledBuildIn(game, choices, release))) contextMenu.Items.Add(item);
 
         contextMenu.Items.Add(new Separator());
         // Add cancel option
@@ -323,7 +323,9 @@ public sealed class LibraryLaunchController
             if (game.TryAcknowledgeAlreadyInstalledRelease(latestRelease.tag_name))
                 return false;
             var choices = GameDownloadService.Prepare(game, latestRelease, _settings);
-            if (choices.Automatic is { } automatic)
+            // The build already installed, else the only one for this platform: either installs without a picker,
+            // so automatic updates reach apps with several downloads too.
+            if ((GameDownloadService.InstalledBuildIn(game, choices, latestRelease) ?? choices.Automatic) is { } automatic)
             {
                 // Install the release just revalidated above. Resolving again after
                 // applying it can lose the pin that selected this exact release.
@@ -573,7 +575,8 @@ public sealed class LibraryLaunchController
         if (choices.EmptyReason != null)
             contextMenu.Items.Add(new MenuItem { Header = choices.EmptyReason, IsEnabled = false });
         foreach (var item in CreateDownloadChoices(choices, asset =>
-            InstallChosenReleaseAsync(game, release, asset, preferredVersion, skippedUpdateVersion, reinstall)))
+            InstallChosenReleaseAsync(game, release, asset, preferredVersion, skippedUpdateVersion, reinstall),
+            GameDownloadService.InstalledBuildIn(game, choices, release)))
             contextMenu.Items.Add(item);
 
         contextMenu.Items.Add(new Separator());
@@ -622,17 +625,21 @@ public sealed class LibraryLaunchController
         Changed();
     }
 
-    internal IEnumerable<MenuItem> CreateDownloadChoices(DownloadAssetSelection choices, Func<GitHubAsset, Task> install)
+    /// <param name="installed">The same build as the one installed: listed first and labelled, so a misclick is less likely
+    /// to replace it with another build.</param>
+    internal IEnumerable<MenuItem> CreateDownloadChoices(DownloadAssetSelection choices, Func<GitHubAsset, Task> install, GitHubAsset? installed = null)
     {
         MenuItem Create(GitHubAsset asset, bool uncertain)
         {
             var native = GameInfo.MatchesPlatform(asset.name, GameInfo.GetPlatformIdentifier(_settings));
+            var same = asset == installed;
+            var label = same ? " (Same build as installed)" : uncertain ? " (Unrecognized platform)" : native ? " (Recommended)" : "";
             var item = new MenuItem
             {
-                Header = CreateDownloadAssetMenuHeader(asset.name + (uncertain ? " (Unrecognized platform)" : native ? " (Recommended)" : ""), GameInfo.GetPlatformIcon(asset.name)),
+                Header = CreateDownloadAssetMenuHeader(asset.name + label, GameInfo.GetPlatformIcon(asset.name)),
                 Tag = asset,
             };
-            if (native && !uncertain) item.Classes.Add("accent");
+            if (same || installed == null && native && !uncertain) item.Classes.Add("accent");
             item.Click += async (_, _) => await _session.RunAsync(async () =>
             {
                 try { await install(asset); }
@@ -640,11 +647,13 @@ public sealed class LibraryLaunchController
             });
             return item;
         }
-        foreach (var asset in choices.Eligible) yield return Create(asset, false);
-        if (choices.Uncertain.Count > 0)
+        if (installed != null) yield return Create(installed, false);
+        foreach (var asset in choices.Eligible.Where(a => a != installed)) yield return Create(asset, false);
+        var uncertain = choices.Uncertain.Where(a => a != installed).ToList();
+        if (uncertain.Count > 0)
         {
             var other = new MenuItem { Header = "Show other downloads" };
-            foreach (var asset in choices.Uncertain) other.Items.Add(Create(asset, true));
+            foreach (var asset in uncertain) other.Items.Add(Create(asset, true));
             yield return other;
         }
     }

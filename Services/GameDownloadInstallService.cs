@@ -306,6 +306,12 @@ public static class GameDownloadInstallService
                     finally { game.IsLoading = false; }
                     if (WindowsInstallerService.HasReceipt(gamePath)) WindowsInstallerService.ApplyState(game, gamePath);
                     else ResetNotInstalled(game);
+                    // Which file was installed, so the next update picks the same one (the .msi, not the zip beside it).
+                    if (game.IsWindowsInstaller && game.InstalledVersion == latestRelease.tag_name)
+                    {
+                        game.InstalledBuild = new InstalledBuild(asset.name, actual);
+                        await game.InstalledBuild.WriteAsync(gamePath).ConfigureAwait(false);
+                    }
                     game.DownloadProgress = 0;
                     game.ClearDownloadSelection();
                     game.AvailableDownloads = null;

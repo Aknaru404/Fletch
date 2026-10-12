@@ -158,10 +158,70 @@ public class DownloadAssetPolicyTests
         DownloadAssetPolicy.Select(Release(name), "Windows").Automatic.Should().NotBeNull();
     }
 
+    [Theory]
+    [InlineData("Game-1.2.0-linux-x64.zip", "v1.2.0", "v1.3.0", "Game-1.3.0-linux-x64.zip")]
+    [InlineData("Game-v1.2.0-linux-x64.zip", "v1.2.0", "v1.3.0", "Game-v1.3.0-linux-x64.zip")]
+    [InlineData("game_1.2.0-beta.2_linux-x64.zip", "1.2.0-beta.2", "1.2.0", "game_1.2.0_linux-x64.zip")]
+    [InlineData("Game-r22-linux-x64.zip", "r22", "r23", "Game-r23-linux-x64.zip")]
+    [InlineData("Game-nightly-2026-10-10-linux-x64.zip", "nightly-2026-10-10", "nightly-2026-10-11", "Game-nightly-2026-10-11-linux-x64.zip")]
+    [InlineData("Game-linux-x64.zip", "v1.2.0", "v1.3.0", "Game-linux-x64.zip")]
+    [InlineData("GAME-1.2.0-LINUX-X64.ZIP", "v1.2.0", "v1.3.0", "Game-1.3.0-linux-x64.zip")]
+    [InlineData("Game-1.2.0-windows-x64.zip", "v1.2.0", "v1.3.0", "Game-1.3.0-windows-x64.zip")]
+    public void Update_keeps_the_installed_build_with_its_version_changed(string installed, string installedTag, string tag, string expected)
+    {
+        // The release's other files: other architectures, formats and platforms.
+        var choices = DownloadAssetPolicy.Select(TaggedRelease(tag, new[] { expected, expected.Replace("x64", "arm64"),
+            expected.Replace(".zip", ".AppImage"), expected.Replace("linux", "windows") }.Distinct().ToArray()), "Linux-X64");
+        DownloadAssetPolicy.MatchInstalled(choices, installed, installedTag, tag)!.name.Should().Be(expected);
+    }
+
+    [Fact]
+    public void Linux_update_keeps_whichever_of_the_linux_and_windows_builds_is_installed()
+    {
+        var release = TaggedRelease("v1.3.0", "Game-1.3.0-linux-x64.zip", "Game-1.3.0-windows-x64.zip");
+        var choices = DownloadAssetPolicy.Select(release, "Linux-X64");
+        choices.Automatic.Should().BeNull();
+        DownloadAssetPolicy.MatchInstalled(choices, "Game-1.2.0-linux-x64.zip", "v1.2.0", "v1.3.0")!.name.Should().Be("Game-1.3.0-linux-x64.zip");
+        DownloadAssetPolicy.MatchInstalled(choices, "Game-1.2.0-windows-x64.zip", "v1.2.0", "v1.3.0")!.name.Should().Be("Game-1.3.0-windows-x64.zip");
+    }
+
+    [Theory]
+    [InlineData("Game-1.2.0-linux-arm64.zip")] // Another architecture.
+    [InlineData("Game-1.2.0-linux-x64.AppImage")] // Another format.
+    [InlineData("Game-1.2.0-linux-x64-debug.zip")] // A build the release no longer has.
+    [InlineData("")]
+    public void Update_matches_nothing_when_the_installed_build_is_not_in_the_release(string installed)
+    {
+        var choices = DownloadAssetPolicy.Select(TaggedRelease("v1.3.0", "Game-1.3.0-linux-x64.zip", "Game-1.3.0-windows-x64.zip"), "Linux-X64");
+        DownloadAssetPolicy.MatchInstalled(choices, installed, "v1.2.0", "v1.3.0").Should().BeNull();
+    }
+
+    [Fact]
+    public void Update_matches_nothing_when_two_files_differ_only_by_version()
+    {
+        var choices = DownloadAssetPolicy.Select(TaggedRelease("v1.3.0", "Game-1.3.0-linux-x64.zip", "Game-1.3.1-linux-x64.zip"), "Linux-X64");
+        DownloadAssetPolicy.MatchInstalled(choices, "Game-1.2.0-linux-x64.zip", "v1.2.0", "v1.3.0").Should().BeNull();
+    }
+
+    [Fact]
+    public void Update_matches_an_installed_file_from_the_other_downloads()
+    {
+        var choices = DownloadAssetPolicy.Select(TaggedRelease("v1.3.0", "Game-1.3.0-linux-x64.zip", "Game-1.3.0-data.pak"), "Linux-X64");
+        choices.Uncertain.Should().ContainSingle();
+        DownloadAssetPolicy.MatchInstalled(choices, "Game-1.2.0-data.pak", "v1.2.0", "v1.3.0")!.name.Should().Be("Game-1.3.0-data.pak");
+    }
+
     internal static GitHubRelease Release(params string[] names) => new()
     {
         tag_name = "v1", assets = names.Select(n => new GitHubAsset { name = n, browser_download_url = "https://example.test/" + n }).ToArray(),
     };
+
+    private static GitHubRelease TaggedRelease(string tag, params string[] names)
+    {
+        var release = Release(names);
+        release.tag_name = tag;
+        return release;
+    }
 
     [Fact]
     public void Windows_automatically_selects_build_without_sidecars_or_other_platforms()
