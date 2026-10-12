@@ -64,9 +64,11 @@ public class StartupVersionRefreshTests
         using var client = new HttpClient(new Handler((r, _) =>
         {
             var path = r.RequestUri!.AbsolutePath;
-            counts[path] = counts.GetValueOrDefault(path) + 1;
+            int count;
+            // The checker sends requests concurrently.
+            lock (counts) count = counts[path] = counts.GetValueOrDefault(path) + 1;
             var status = path.Contains(missing.Repository!) ? HttpStatusCode.NotFound :
-                path.Contains(transient.Repository!) && counts[path] == 1 ? HttpStatusCode.ServiceUnavailable : HttpStatusCode.OK;
+                path.Contains(transient.Repository!) && count == 1 ? HttpStatusCode.ServiceUnavailable : HttpStatusCode.OK;
             return Task.FromResult(status == HttpStatusCode.OK ? Ok(r) : new HttpResponseMessage(status));
         }));
         var result = await new LibraryUpdateChecker(client, new()).CheckStartupAsync([good, transient, missing],
