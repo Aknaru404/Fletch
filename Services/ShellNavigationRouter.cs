@@ -49,7 +49,7 @@ public sealed class ShellNavigationRouter(ShellViewModel shell, GamepadNavigatio
         if (IsChrome(zone) || zone is GamepadNavigationZone.ModsOverlayToolbar or GamepadNavigationZone.ModsOverlayFilters
             or GamepadNavigationZone.ModsOverlaySourceFilters or GamepadNavigationZone.ModsOverlayList
             or GamepadNavigationZone.ModsOverlayRowActions or GamepadNavigationZone.ModsDetailsOverlay
-            or GamepadNavigationZone.BrowseDetailsOverlay) For(zone)?.RestoreFocus();
+            or GamepadNavigationZone.BrowseDetailsOverlay) For(zone)?.RestoreFocus(bringIntoView);
         else restoreMainFocus();
     }
     public bool Navigate(NavigationDirection direction)

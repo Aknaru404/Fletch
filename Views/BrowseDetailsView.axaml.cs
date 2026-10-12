@@ -62,6 +62,13 @@ public partial class BrowseDetailsView : UserControl, IFeatureNavigationHandler
     public BrowseDetailsView()
     {
         InitializeComponent();
+        // Focus alone doesn't scroll the page: the window regaining focus refocuses the control that had it, and that
+        // must not jump back to it. Tab still brings what it reaches into view; the controller and arrows do so themselves.
+        BrowseDetailsScrollViewer.AddHandler(GotFocusEvent, (_, e) =>
+        {
+            if (e.NavigationMethod == Avalonia.Input.NavigationMethod.Tab && e.Source is Control control && control != BrowseDetailsScrollViewer)
+                control.BringIntoView();
+        });
         AddHandler(BrowseCard.AddRequestedEvent, (_, e) =>
         {
             if (e.Source is not Control { DataContext: BrowseItem item } || item.IsAdding) return;
@@ -622,11 +629,14 @@ public partial class BrowseDetailsView : UserControl, IFeatureNavigationHandler
     }
 
     public bool Options() => Cancel();
-    public void RestoreFocus()
+    public void RestoreFocus() => RestoreFocus(bringIntoView: true);
+    // Coming back to the window (bringIntoView false) leaves the page where it was scrolled, and a reader in it reading.
+    public void RestoreFocus(bool bringIntoView)
     {
+        if (!bringIntoView && BodyFocused) return;
         BodyFocused = false;
-        if (FocusIndex >= 0) ApplySelection(FocusIndex);
-        else SelectFirstAction();
+        if (FocusIndex >= 0) ApplySelection(FocusIndex, bringIntoView);
+        else SelectFirstAction(bringIntoView);
     }
 
     private void ApplySelection(int index) => ApplySelection(index, bringIntoView: true);
