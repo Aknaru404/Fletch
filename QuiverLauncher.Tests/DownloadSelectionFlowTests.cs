@@ -125,6 +125,43 @@ public class DownloadSelectionFlowTests
         fixture.Handler.Downloads.Should().Be(0);
     }
 
+    [AvaloniaTheory]
+    [InlineData(true)]
+    [InlineData(false)]
+    public async Task Update_installs_the_build_already_installed_without_a_picker(bool interactive)
+    {
+        using var fixture = new Fixture();
+        fixture.Handler.Assets = ["Game-1.0.0-windows-x64.zip", "Game-1.0.0-windows-x64-portable.zip", "Game-1.0.0-macos.zip"];
+        await using var session = new LauncherSession();
+        var game = fixture.Game();
+        game.Status = GameStatus.UpdateAvailable;
+        game.InstalledVersion = "0.9.0";
+        var gamePath = game.GetInstallPath(fixture.Manager.GamesFolder);
+        Directory.CreateDirectory(gamePath);
+        game.InstalledBuild = new InstalledBuild("Game-0.9.0-windows-x64-portable.zip", new string('0', 64));
+        await game.InstalledBuild.WriteAsync(gamePath);
+        var result = await fixture.Controller(session).HandleUpdateNowAsync(new Button(), game,
+            preferAutoPlatform: !interactive, allowAssetPicker: interactive, interactive: interactive);
+        result.Should().BeTrue();
+        fixture.Handler.Downloaded.Should().Equal("Game-1.0.0-windows-x64-portable.zip");
+        game.Status.Should().Be(GameStatus.Installed);
+        InstalledBuild.Read(gamePath)!.FileName.Should().Be("Game-1.0.0-windows-x64-portable.zip");
+    }
+
+    [AvaloniaFact]
+    public async Task Picker_lists_the_installed_build_first()
+    {
+        using var fixture = new Fixture();
+        await using var session = new LauncherSession();
+        var choices = DownloadAssetPolicy.Select(DownloadAssetPolicyTests.Release("game-windows.zip", "game-windows-portable.zip"), "Windows");
+        var items = fixture.Controller(session).CreateDownloadChoices(choices, _ => Task.CompletedTask, choices.Eligible[1]).ToList();
+        items.Select(i => ((GitHubAsset)i.Tag!).name).Should().Equal("game-windows-portable.zip", "game-windows.zip");
+        Text(items[0]).Should().Be("game-windows-portable.zip (Same build as installed)");
+        items[0].Classes.Should().Contain("accent");
+        items[1].Classes.Should().NotContain("accent");
+        static string? Text(MenuItem item) => ((Panel)item.Header!).Children.OfType<TextBlock>().Single().Text;
+    }
+
     [Fact]
     public async Task CLI_ambiguous_download_exits_without_waiting_for_a_picker()
     {
@@ -174,8 +211,11 @@ public class DownloadSelectionFlowTests
     private sealed class Handler : HttpMessageHandler
     {
         public int Downloads;
+        public readonly List<string> Downloaded = [];
         public bool Single;
-        public GitHubRelease Release => Single
+        /// <summary>The release's files, each of which can be downloaded.</summary>
+        public string[]? Assets;
+        public GitHubRelease Release => Assets != null ? DownloadAssetPolicyTests.Release(Assets) : Single
             ? DownloadAssetPolicyTests.Release("game-windows.zip", "game-windows.zip.sha256", "game-macos.zip", "game-linux.AppImage", "Nautilus-Alfa-iOS.zip",
                 "game-windows.zip.provenance.json", "game-rg34xxsp-stockos64-mod.zip", "game-sbc-portmaster.zip", "game-xbox-uwp.zip")
             : DownloadAssetPolicyTests.Release("game-windows.zip", "game-windows-portable.zip", "game-macos.zip");
@@ -186,7 +226,8 @@ public class DownloadSelectionFlowTests
             if (request.RequestUri!.Host != "api.github.com")
             {
                 Downloads++;
-                if (!Single || !request.RequestUri.AbsolutePath.EndsWith("/game-windows.zip")) throw new Exception("Unexpected asset download");
+                Downloaded.Add(Path.GetFileName(request.RequestUri.AbsolutePath));
+                if (Assets == null && (!Single || !request.RequestUri.AbsolutePath.EndsWith("/game-windows.zip"))) throw new Exception("Unexpected asset download");
                 using var stream = new MemoryStream();
                 using (var zip = new System.IO.Compression.ZipArchive(stream, System.IO.Compression.ZipArchiveMode.Create, true))
                 using (var file = zip.CreateEntry("game.exe").Open()) file.Write([0x4D, 0x5A, 0x90, 0x00]);
