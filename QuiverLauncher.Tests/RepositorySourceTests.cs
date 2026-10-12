@@ -90,8 +90,8 @@ public class RepositorySourceTests
             var array = document.RootElement.GetProperty("apps");
 
             array[0].TryGetProperty("repositorySource", out _).Should().BeFalse();
-            array[1].GetProperty("repositorySource").GetString().Should().Be("gitlab");
-            array[2].GetProperty("repositorySource").GetString().Should().Be("codeberg");
+            array[1].GetProperty("repositorySource").GetString().Should().Be("codeberg");
+            array[2].GetProperty("repositorySource").GetString().Should().Be("gitlab");
 
             var loaded = await catalog.LoadLocalAppsAsync();
             loaded.Should().ContainSingle(a => a.Repository == "owner/github-app" && a.RepositorySource == null);

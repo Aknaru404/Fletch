@@ -18,6 +18,8 @@ public class ReleaseRequestPriorityTests
             return new(HttpStatusCode.OK) { Content = new StringContent("[]") };
         }));
         var coordinator = ReleaseRequestCoordinator.For(client);
+        // Fill the provider's slots so later requests queue.
+        coordinator.MaxConcurrentRequestsPerProvider = 1;
         Task Fetch(string path) => coordinator.FetchAsync(client, new Uri("https://api.github.com/" + path), "github", null, _ => [], TestContext.Current.CancellationToken);
         var first = Fetch("active");
         await started.Task;
@@ -36,7 +38,7 @@ public class ReleaseRequestPriorityTests
         protected override Task<HttpResponseMessage> SendAsync(HttpRequestMessage request, CancellationToken token) => send(request, token);
     }
     [Fact]
-    public async Task Interactive_request_overtakes_queued_background_work_but_never_runs_concurrently()
+    public async Task Interactive_request_overtakes_queued_background_work_but_never_exceeds_the_provider_limit()
     {
         var firstStarted = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
         var releaseFirst = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
@@ -51,6 +53,8 @@ public class ReleaseRequestPriorityTests
             return new(HttpStatusCode.OK) { Content = new StringContent("[]") };
         }));
         var coordinator = ReleaseRequestCoordinator.For(client);
+        // Fill the provider's slots so later requests queue.
+        coordinator.MaxConcurrentRequestsPerProvider = 1;
         Task Fetch(string path) => coordinator.FetchAsync(client, new Uri("https://api.github.com/" + path), "github", null, _ => [], TestContext.Current.CancellationToken);
         var first = Fetch("first"); await firstStarted.Task;
         var background = Fetch("background");

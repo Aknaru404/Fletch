@@ -197,7 +197,10 @@ public class SettingsTextInputTests
     public async Task Token_draft_is_saved_only_by_explicit_keyboard_or_gamepad_action(bool gamepad)
     {
         var store = new Store();
-        var view = CreateView(store);
+        // Saving a token asks the provider to confirm it; this one accepts it.
+        using var http = new HttpClient(new TokenAccepted());
+        using var manager = new GameManager(store, http);
+        var view = CreateView(store, manager);
         var window = new Window { Content = view, Width = 1100, Height = 800 };
         try
         {
@@ -347,7 +350,10 @@ public class SettingsTextInputTests
     public async Task GitHub_token_remains_editable_after_tab_switches_and_reopening_settings()
     {
         var store = new Store();
-        var view = CreateView(store);
+        // Saving a token asks the provider to confirm it; this one accepts it.
+        using var http = new HttpClient(new TokenAccepted());
+        using var manager = new GameManager(store, http);
+        var view = CreateView(store, manager);
         var window = new Window { Content = view, Width = 1200, Height = 900 };
         try
         {
@@ -487,10 +493,16 @@ public class SettingsTextInputTests
         }
     }
 
-    private static MainView CreateView(Store store) => new(new()
+    private static MainView CreateView(Store store, GameManager? manager = null) => new(new()
     {
-        SettingsStore = store, EnableInput = false, EnableMusic = false, InitializeOnOpen = false
+        SettingsStore = store, GameManager = manager, EnableInput = false, EnableMusic = false, InitializeOnOpen = false
     });
+
+    private sealed class TokenAccepted : HttpMessageHandler
+    {
+        protected override Task<HttpResponseMessage> SendAsync(HttpRequestMessage request, CancellationToken cancellationToken) =>
+            Task.FromResult(new HttpResponseMessage(System.Net.HttpStatusCode.OK) { Content = new StringContent("{}") });
+    }
 
     private sealed class Store : ISettingsStore
     {

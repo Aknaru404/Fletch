@@ -4,7 +4,8 @@ using QuiverLauncher.Core.Services;
 
 namespace QuiverLauncher.Services;
 
-public sealed record ReleaseTokenValidationResult(bool IsValid, string? ErrorMessage = null)
+/// <param name="Rejected">The provider answered and refused the token, rather than being unreachable.</param>
+public sealed record ReleaseTokenValidationResult(bool IsValid, string? ErrorMessage = null, bool Rejected = false)
 {
     public static readonly ReleaseTokenValidationResult Valid = new(true);
 }
@@ -42,9 +43,9 @@ public static class ReleaseTokenValidator
             var resetSeconds = Header(response, "X-RateLimit-Reset") ?? Header(response, "RateLimit-Reset");
             DateTimeOffset? resetAt = resetSeconds is >= 0 and <= 253402300799
                 ? DateTimeOffset.FromUnixTimeSeconds(resetSeconds.Value) : null;
+            var remaining = Header(response, "X-RateLimit-Remaining") ?? Header(response, "RateLimit-Remaining");
             ReleaseRequestCoordinator.For(client).RecordRateLimit(provider, token,
-                Header(response, "X-RateLimit-Limit") ?? Header(response, "RateLimit-Limit"),
-                Header(response, "X-RateLimit-Remaining") ?? Header(response, "RateLimit-Remaining"), resetAt);
+                Header(response, "X-RateLimit-Limit") ?? Header(response, "RateLimit-Limit"), remaining, resetAt);
             if (response.IsSuccessStatusCode)
             {
                 ReleaseRequestCoordinator.For(client).RecordValidatedToken(provider, token);
@@ -56,9 +57,12 @@ public static class ReleaseTokenValidator
                 HttpStatusCode.Unauthorized or HttpStatusCode.Forbidden => "The token was rejected or does not have access.",
                 _ => $"The provider returned {(int)response.StatusCode} ({response.ReasonPhrase}).",
             };
-            if (response.StatusCode is HttpStatusCode.Unauthorized or HttpStatusCode.Forbidden)
+            // GitHub also answers 403 when the hourly quota is used up; that says nothing about the token.
+            var rejected = response.StatusCode == HttpStatusCode.Unauthorized ||
+                response.StatusCode == HttpStatusCode.Forbidden && remaining != 0;
+            if (rejected)
                 ReleaseRequestCoordinator.For(client).InvalidateValidatedToken(provider, token);
-            return new(false, reason);
+            return new(false, reason, rejected);
         }
         catch (OperationCanceledException) when (!cancellationToken.IsCancellationRequested)
         {

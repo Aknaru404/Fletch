@@ -236,7 +236,6 @@ public class ReleaseRequestCoordinatorTests
             var entry = new ReleaseEndpointCache.Entry("[]", "W/\"release\"", DateTimeOffset.UtcNow.AddDays(-3));
             var cache = new ReleaseEndpointCache(path);
             cache.Set("github:anonymous:https://api.github.com/repos/a/b/releases", entry);
-            cache.FlushEntries();
             Assert.Equal(entry, new ReleaseEndpointCache(path).Get("github:anonymous:https://api.github.com/repos/a/b/releases"));
         }
         finally { if (Directory.Exists(path)) Directory.Delete(path, true); }

@@ -456,7 +456,8 @@ public partial class SettingsView : UserControl
         if (!string.IsNullOrEmpty(token))
         {
             var validation = await ReleaseTokenValidator.ValidateAsync(_gameManager.HttpClient, provider, token, _session.Token);
-            if (!validation.IsValid) { await _host.ShowMessageBoxAsync($"{validation.ErrorMessage}\n\nThe saved {RepositorySourceHelper.DisplayName(provider)} token was left unchanged.", "Token validation failed"); return; }
+            // Only a token the provider refused is kept out; one that couldn't be checked (offline) is saved.
+            if (validation.Rejected) { await _host.ShowMessageBoxAsync($"{validation.ErrorMessage}\n\nThe saved {RepositorySourceHelper.DisplayName(provider)} token was left unchanged.", "Token validation failed"); return; }
         }
         Model.SaveApiToken(provider, token); UpdateTokenButton(provider); RefreshApiRateLimits();
         if (provider == "github") _host.ApplyTopBanner();

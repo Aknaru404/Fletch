@@ -6,7 +6,8 @@ internal sealed class ReleaseRequestQueue
     private sealed record Waiter(Func<bool> Priority, TaskCompletionSource Ready);
     private readonly object _gate = new();
     private readonly List<Waiter> _waiting = [];
-    private const int MaxConcurrency = 8;
+    public const int DefaultMaxConcurrency = 8;
+    public int MaxConcurrency { get; set; } = DefaultMaxConcurrency;
     private int _active;
 
     public async Task EnterAsync(Func<bool> priority, CancellationToken token)

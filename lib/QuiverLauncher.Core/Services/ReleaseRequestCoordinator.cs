@@ -109,6 +109,12 @@ public sealed class ReleaseRequestCoordinator
     private readonly ReleaseRequestQueue _github = new();
     private readonly ReleaseRequestQueue _gitlab = new();
     private readonly ReleaseRequestQueue _codeberg = new();
+    /// <summary>Requests each provider may have in flight at once.</summary>
+    internal int MaxConcurrentRequestsPerProvider
+    {
+        get => _github.MaxConcurrency;
+        set { _github.MaxConcurrency = value; _gitlab.MaxConcurrency = value; _codeberg.MaxConcurrency = value; }
+    }
     private ReleaseEndpointCache _cache = new();
     public event Action<GitHubReleaseFetchResult>? RequestCompleted;
     public TimeProvider Clock { get; private set; } = TimeProvider.System;
@@ -171,10 +177,10 @@ public sealed class ReleaseRequestCoordinator
         var ct = deadline.Token;
         try
         {
-            if (ReserveKnownQuota(context, provider, !string.IsNullOrWhiteSpace(token)) is { } quotaPaused)
-                return quotaPaused;
             lock (_gate)
                 if (_cooldowns.TryGetValue(context, out var paused) && paused.RetryAt > Clock.GetUtcNow()) return paused;
+            if (ReserveKnownQuota(context, provider, !string.IsNullOrWhiteSpace(token)) is { } quotaPaused)
+                return quotaPaused;
             // The payload itself is read only if the server says it is still current.
             var cachedETag = _cache.ETag(key);
             Uri url;

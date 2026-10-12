@@ -47,9 +47,9 @@ public partial class LauncherBannerView : UserControl, IFeatureNavigationHandler
             _rateLimitedProvider = provider;
             GitHubTokenBannerSettingsButton.Content = $"Set a {(provider == "github" ? "GitHub" : "GitLab")} token";
             var retry = result.RetryAt ?? result.ResetAt;
-            GitHubTokenBannerText.Text = provider == "github"
+            GitHubTokenBannerText.Text = (provider == "github"
                 ? "GitHub's unauthenticated request limit was reached. Launcher updates and updates for games hosted on GitHub cannot be checked right now. Set a GitHub token to use the authenticated allowance."
-                : "GitLab's unauthenticated request limit was reached. Updates for games hosted on GitLab cannot be checked right now. Set a GitLab token to use the authenticated allowance."
+                : "GitLab's unauthenticated request limit was reached. Updates for games hosted on GitLab cannot be checked right now. Set a GitLab token to use the authenticated allowance.")
                 + (retry is { } time ? $" Without a token, retry after {time.ToLocalTime():g}." : "");
             ApplyTopBanner();
         });

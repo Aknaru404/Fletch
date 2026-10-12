@@ -118,7 +118,7 @@ public sealed class LibraryUpdateChecker(HttpClient client, AppSettings settings
         foreach (var (_, credential) in credentialsToValidate)
         {
             var validation = await ReleaseTokenValidator.ValidateAsync(client, credential.Provider, credential.Token, token);
-            if (!validation.IsValid) invalidProviders.Add(credential.Provider);
+            if (validation.Rejected) invalidProviders.Add(credential.Provider);
         }
         Trace.WriteLine($"Update check: apps={targets.Length}, successful={results.Count(r => r.Outcome == AppCheckOutcome.Successful)}, requests={coordinator.RequestCount - startRequests}, elapsedMs={watch.ElapsedMilliseconds}");
         return new(results, invalidProviders.ToArray());
