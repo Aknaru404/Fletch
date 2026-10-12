@@ -198,6 +198,70 @@ public class BrowseNavigationTests
         }
     }
 
+    [AvaloniaFact]
+    public async Task On_a_handheld_held_sideways_the_catalog_controls_scroll_away_with_the_cards()
+    {
+        var root = Path.Combine(Path.GetTempPath(), "quiver-browse-handheld-" + Guid.NewGuid().ToString("N"));
+        var previousRoot = QuiverLauncherPaths.OverrideUserDataRoot;
+        Directory.CreateDirectory(root);
+        QuiverLauncherPaths.OverrideUserDataRoot = root;
+        var store = new Store();
+        store.Current.AppsPath = Path.Combine(root, "Apps");
+        using var http = new HttpClient(new Site());
+        var manager = new GameManager(store, http) { UiThreadInvoker = action => Dispatcher.UIThread.InvokeAsync(action).GetTask() };
+        var view = new MainView(new() { SettingsStore = store, GameManager = manager, InitializeOnOpen = false, EnableInput = false, EnableMusic = false });
+        // A 1920×1080 handheld at its usual density, in landscape.
+        var window = new Window { Content = view, Width = 853, Height = 480 };
+        var browse = view.FindControl<BrowseView>("BrowsePanel")!;
+        var navigation = ((IFeatureNavigationHost)view).Navigation;
+        var scroller = browse.BrowseScrollViewer;
+        bool Move(NavigationDirection direction) => (bool)Shell(view, "HandleGamepadNavigation", direction)!;
+        double Top(Control control) => control.TranslatePoint(default, scroller)!.Value.Y;
+        try
+        {
+            window.Show(); Dispatcher.UIThread.RunJobs();
+            var split = view.FindControl<SplitView>("MainSplitView")!;
+            split.DisplayMode = SplitViewDisplayMode.Overlay;
+            split.IsPaneOpen = false;
+            browse.ApplyMobileLayout();
+            GamepadFocusChrome.SetKeyboardNavigationActive(true);
+            view.FindControl<Button>("BrowseNavButton")!.RaiseEvent(new RoutedEventArgs(Button.ClickEvent));
+            await Until(() => browse.Model.Items.Count == 3);
+            window.UpdateLayout();
+
+            // The title, search and filters start at the top of the scrolling area, above the cards.
+            scroller.Offset.Y.Should().Be(0);
+            Top(browse.BrowseToolbarPanel).Should().BeApproximately(0, 1);
+            Top(browse.BrowseItemsControl).Should().BeGreaterThan(Top(browse.BrowseFiltersPanel) + browse.BrowseFiltersPanel.Bounds.Height - 1);
+
+            // Scrolling down moves them up and out of the way with the cards (three cards only scroll part of the way here).
+            var search = Top(browse.BrowseSearchTextBox);
+            scroller.Offset = new Vector(0, scroller.Extent.Height - scroller.Viewport.Height);
+            window.UpdateLayout();
+            scroller.Offset.Y.Should().BeGreaterThan(browse.BrowseToolbarPanel.Bounds.Height);
+            Top(browse.BrowseSearchTextBox).Should().BeApproximately(search - scroller.Offset.Y, 1);
+
+            // Up from the first card with a controller brings the filters back into view.
+            Move(NavigationDirection.Up).Should().BeTrue();
+            navigation.ActiveZone.Should().Be(GamepadNavigationZone.BrowseFilters);
+            Dispatcher.UIThread.RunJobs();
+            window.UpdateLayout();
+            var focused = new Control[] { browse.BrowseTypeComboBox, browse.BrowsePlatformComboBox, browse.BrowseConsoleComboBox,
+                browse.BrowseAiComboBox, browse.BrowseHideLibraryCheckBox }.Single(c => c.Classes.Contains("gamepad-focused"));
+            Top(focused).Should().BeGreaterThanOrEqualTo(-1);
+            (Top(focused) + focused.Bounds.Height).Should().BeLessThanOrEqualTo(scroller.Viewport.Height + 1);
+        }
+        finally
+        {
+            window.Close();
+            await view.ShutdownAsync();
+            manager.Dispose();
+            GamepadFocusChrome.SetKeyboardNavigationActive(false);
+            QuiverLauncherPaths.OverrideUserDataRoot = previousRoot;
+            TestFixtures.CleanupDirectory(root);
+        }
+    }
+
     private static object? Shell(MainView view, string method, params object[] args) =>
         typeof(MainView).GetMethod(method, BindingFlags.Instance | BindingFlags.NonPublic)!.Invoke(view, args);
 
