@@ -22,6 +22,11 @@
 			<ExcludeAssets>all</ExcludeAssets>
 			<PrivateAssets>all</PrivateAssets>
 		</PackageReference>
+		<!-- Android has no SDL controller input (PlatformCapabilities.SupportsGamepadSdl), so leave SDL's native
+		     libraries out of the APK. Keep the version in step with QuiverLauncher.App.csproj. -->
+		<PackageReference Include="ppy.SDL3-CS" Version="2026.1002.1">
+			<ExcludeAssets>native</ExcludeAssets>
+		</PackageReference>
 	</ItemGroup>
 
 	<ItemGroup>

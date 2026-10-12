@@ -4,10 +4,11 @@ using Avalonia.Controls.Primitives;
 using Avalonia.Input;
 using Avalonia.Threading;
 using Avalonia.VisualTree;
-using SDL2;
+using SDL;
 using System;
 using System.Collections.Generic;
 using System.Linq;
+using static SDL.SDL3;
 
 namespace QuiverLauncher.Services
 {
@@ -15,13 +16,14 @@ namespace QuiverLauncher.Services
     {
         private readonly Control _mainWindow;
         private DispatcherTimer? _gamepadTimer;
-        private readonly Dictionary<int, GamepadSample> _gamepadStates = new();
-        private readonly Dictionary<int, IntPtr> _gameControllers = new();
+        // Keyed by SDL joystick instance ID, which SDL3 never reuses for another device.
+        private readonly Dictionary<SDL_JoystickID, GamepadSample> _gamepadStates = new();
+        private readonly Dictionary<SDL_JoystickID, OpenGamepad> _gameControllers = new();
         private Dictionary<GamepadAction, List<GamepadBinding>> _bindings = GamepadBindingDefaults.Create();
         private bool _disposed = false;
         private bool _isWindowActive = true;
         private bool _captureMode;
-        // Set when the native SDL2 library cannot be loaded; gamepad input is then unavailable.
+        // Set when the native SDL3 library cannot be loaded; gamepad input is then unavailable.
         private bool _sdlLibraryMissing;
 
         private bool SdlAvailable => PlatformCapabilities.SupportsGamepadSdl && !_sdlLibraryMissing;
@@ -30,14 +32,14 @@ namespace QuiverLauncher.Services
         private const float DeadZone = 0.3f;
         private const short AxisMax = 32767;
 
-        private static readonly SDL.SDL_GameControllerButton[] AllButtons =
-            Enum.GetValues<SDL.SDL_GameControllerButton>()
-                .Where(b => b != SDL.SDL_GameControllerButton.SDL_CONTROLLER_BUTTON_INVALID)
+        private static readonly SDL_GamepadButton[] AllButtons =
+            Enum.GetValues<SDL_GamepadButton>()
+                .Where(b => b is not (SDL_GamepadButton.SDL_GAMEPAD_BUTTON_INVALID or SDL_GamepadButton.SDL_GAMEPAD_BUTTON_COUNT))
                 .ToArray();
 
-        private static readonly SDL.SDL_GameControllerAxis[] AllAxes =
-            Enum.GetValues<SDL.SDL_GameControllerAxis>()
-                .Where(a => a != SDL.SDL_GameControllerAxis.SDL_CONTROLLER_AXIS_INVALID)
+        private static readonly SDL_GamepadAxis[] AllAxes =
+            Enum.GetValues<SDL_GamepadAxis>()
+                .Where(a => a is not (SDL_GamepadAxis.SDL_GAMEPAD_AXIS_INVALID or SDL_GamepadAxis.SDL_GAMEPAD_AXIS_COUNT))
                 .ToArray();
 
         // Input repeat delays (hold auto-repeat; discrete presses reset on release)
@@ -133,21 +135,21 @@ namespace QuiverLauncher.Services
 
             return _gameControllers
                 .OrderBy(kvp => kvp.Key)
-                .Select(kvp =>
+                .Select((kvp, index) =>
                 {
-                    var name = SDL.SDL_GameControllerName(kvp.Value);
+                    var name = kvp.Value.Name;
                     return new ConnectedGamepadInfo
                     {
-                        Index = kvp.Key,
-                        Name = string.IsNullOrWhiteSpace(name) ? $"Controller {kvp.Key + 1}" : name,
+                        Index = index,
+                        Name = string.IsNullOrWhiteSpace(name) ? $"Controller {index + 1}" : name,
                     };
                 })
                 .ToList();
         }
 
         /// <summary>
-        /// Whether an already-opened SDL handle at this joystick index is still valid.
-        /// Steam's virtual pad often reconnects at the same index with a new device.
+        /// Whether an already-opened SDL handle for this joystick instance is still valid.
+        /// Steam's virtual pad often drops and reconnects as a new device.
         /// </summary>
         public static bool ShouldKeepOpenController(bool alreadyOpen, bool attached) =>
             alreadyOpen && attached;
@@ -161,32 +163,32 @@ namespace QuiverLauncher.Services
                 return;
 
             var previousCount = _gameControllers.Count;
-            int numJoysticks = SDL.SDL_NumJoysticks();
-            var seen = new HashSet<int>();
+            var seen = new HashSet<SDL_JoystickID>();
 
-            for (int i = 0; i < numJoysticks; i++)
+            using (var gamepads = SDL_GetGamepads())
             {
-                if (SDL.SDL_IsGameController(i) != SDL.SDL_bool.SDL_TRUE)
-                    continue;
-
-                seen.Add(i);
-                if (_gameControllers.TryGetValue(i, out var existing))
+                for (int i = 0; i < (gamepads?.Count ?? 0); i++)
                 {
-                    var attached = SDL.SDL_GameControllerGetAttached(existing) == SDL.SDL_bool.SDL_TRUE;
-                    if (ShouldKeepOpenController(alreadyOpen: true, attached))
+                    var id = gamepads![i];
+                    seen.Add(id);
+                    if (_gameControllers.TryGetValue(id, out var existing))
+                    {
+                        var attached = existing.IsConnected;
+                        if (ShouldKeepOpenController(alreadyOpen: true, attached))
+                            continue;
+
+                        if (ShouldReopenController(alreadyOpen: true, attached))
+                            CloseControllerAt(id);
+                    }
+
+                    var controller = OpenGamepad.Open(id);
+                    if (controller == null)
                         continue;
 
-                    if (ShouldReopenController(alreadyOpen: true, attached))
-                        CloseControllerAt(i);
+                    _gameControllers[id] = controller;
+                    _gamepadStates[id] = new GamepadSample();
+                    System.Diagnostics.Debug.WriteLine($"Game controller {id} connected: {controller.Name}");
                 }
-
-                IntPtr controller = SDL.SDL_GameControllerOpen(i);
-                if (controller == IntPtr.Zero)
-                    continue;
-
-                _gameControllers[i] = controller;
-                _gamepadStates[i] = new GamepadSample();
-                System.Diagnostics.Debug.WriteLine($"Game controller {i} connected: {SDL.SDL_GameControllerName(controller)}");
             }
 
             var removed = _gameControllers.Keys.Where(index => !seen.Contains(index)).ToList();
@@ -209,37 +211,34 @@ namespace QuiverLauncher.Services
 
             CloseAllControllers();
             CheckSDLWindowFocus();
-            SDL.SDL_GameControllerUpdate();
+            SDL_UpdateGamepads();
             RefreshConnectedControllers();
 
             if (reinitIfEmpty && _gameControllers.Count == 0)
                 ReinitGameControllerSubsystem();
         }
 
-        private void CloseControllerAt(int index)
+        private void CloseControllerAt(SDL_JoystickID id)
         {
-            if (_gameControllers.TryGetValue(index, out var controller))
-            {
-                SDL.SDL_GameControllerClose(controller);
-                _gameControllers.Remove(index);
-            }
+            if (_gameControllers.Remove(id, out var controller))
+                controller.Close();
 
-            _gamepadStates.Remove(index);
+            _gamepadStates.Remove(id);
         }
 
         private void CloseAllControllers()
         {
-            foreach (var index in _gameControllers.Keys.ToList())
-                CloseControllerAt(index);
+            foreach (var id in _gameControllers.Keys.ToList())
+                CloseControllerAt(id);
         }
 
         private void ReinitGameControllerSubsystem()
         {
-            SDL.SDL_QuitSubSystem(SDL.SDL_INIT_GAMECONTROLLER);
-            SteamDeckSdlHints.ApplyBeforeInit((name, value) => SDL.SDL_SetHint(name, value));
-            if (SDL.SDL_InitSubSystem(SDL.SDL_INIT_GAMECONTROLLER) < 0)
+            SDL_QuitSubSystem(SDL_InitFlags.SDL_INIT_GAMEPAD);
+            SteamDeckSdlHints.ApplyBeforeInit((name, value) => SDL_SetHint(name, value));
+            if (!SDL_InitSubSystem(SDL_InitFlags.SDL_INIT_GAMEPAD))
             {
-                System.Diagnostics.Debug.WriteLine($"SDL gamecontroller reinit failed: {SDL.SDL_GetError()}");
+                System.Diagnostics.Debug.WriteLine($"SDL gamepad reinit failed: {SDL_GetError()}");
                 return;
             }
 
@@ -255,20 +254,20 @@ namespace QuiverLauncher.Services
             {
                 // Desktop Mode: avoid Steam HIDAPI so lizard mode / Steam+X keep working.
                 // Gaming Mode: allow Steam Virtual Gamepad so SDL sees the Deck pad.
-                SteamDeckSdlHints.ApplyBeforeInit((name, value) => SDL.SDL_SetHint(name, value));
+                SteamDeckSdlHints.ApplyBeforeInit((name, value) => SDL_SetHint(name, value));
 
-                if (SDL.SDL_Init(SDL.SDL_INIT_GAMECONTROLLER) < 0)
+                if (!SDL_Init(SDL_InitFlags.SDL_INIT_GAMEPAD))
                 {
-                    System.Diagnostics.Debug.WriteLine($"SDL initialization failed: {SDL.SDL_GetError()}");
+                    System.Diagnostics.Debug.WriteLine($"SDL initialization failed: {SDL_GetError()}");
                     return;
                 }
             }
             catch (DllNotFoundException ex)
             {
-                // No native SDL2 for this platform/architecture: start without gamepad
+                // No native SDL3 for this platform/architecture: start without gamepad
                 // input rather than failing to open the launcher.
                 _sdlLibraryMissing = true;
-                System.Diagnostics.Debug.WriteLine($"SDL2 unavailable, gamepad input disabled: {ex.Message}");
+                System.Diagnostics.Debug.WriteLine($"SDL3 unavailable, gamepad input disabled: {ex.Message}");
                 return;
             }
 
@@ -304,7 +303,7 @@ namespace QuiverLauncher.Services
                 return;
 
             CheckSDLWindowFocus();
-            SDL.SDL_GameControllerUpdate();
+            SDL_UpdateGamepads();
             RefreshConnectedControllers();
 
             var overlayActive = IsGamepadOverlayActive;
@@ -321,13 +320,13 @@ namespace QuiverLauncher.Services
 
             foreach (var kvp in _gameControllers)
             {
-                int index = kvp.Key;
-                IntPtr controller = kvp.Value;
+                var id = kvp.Key;
+                var controller = kvp.Value;
 
-                if (!_gamepadStates.ContainsKey(index))
-                    _gamepadStates[index] = new GamepadSample();
+                if (!_gamepadStates.ContainsKey(id))
+                    _gamepadStates[id] = new GamepadSample();
 
-                var currentState = _gamepadStates[index];
+                var currentState = _gamepadStates[id];
                 var previousState = currentState.Clone();
                 SampleController(controller, currentState);
 
@@ -388,24 +387,24 @@ namespace QuiverLauncher.Services
                 ResetNavigationHold();
         }
 
-        private void SampleController(IntPtr controller, GamepadSample state)
+        private static void SampleController(OpenGamepad controller, GamepadSample state)
         {
             state.Pressed.Clear();
 
-            foreach (var button in AllButtons)
+            for (int i = 0; i < AllButtons.Length; i++)
             {
-                if (SDL.SDL_GameControllerGetButton(controller, button) == 1)
-                    state.Pressed.Add(GamepadBinding.Button(button));
+                if (controller.GetButton(AllButtons[i]))
+                    state.Pressed.Add(new GamepadBinding(GamepadInputKind.Button, controller.ButtonCodes[i]));
             }
 
             foreach (var axis in AllAxes)
             {
-                short raw = SDL.SDL_GameControllerGetAxis(controller, axis);
+                short raw = controller.GetAxis(axis);
                 float value = raw / (float)AxisMax;
 
                 // Triggers are 0..1; sticks are -1..1.
-                bool isTrigger = axis is SDL.SDL_GameControllerAxis.SDL_CONTROLLER_AXIS_TRIGGERLEFT
-                    or SDL.SDL_GameControllerAxis.SDL_CONTROLLER_AXIS_TRIGGERRIGHT;
+                bool isTrigger = axis is SDL_GamepadAxis.SDL_GAMEPAD_AXIS_LEFT_TRIGGER
+                    or SDL_GamepadAxis.SDL_GAMEPAD_AXIS_RIGHT_TRIGGER;
 
                 if (isTrigger)
                 {
@@ -462,27 +461,24 @@ namespace QuiverLauncher.Services
 
             return null;
         }
-        private void CheckSDLWindowFocus()
+        private unsafe void CheckSDLWindowFocus()
         {
-            SDL.SDL_Event sdlEvent;
+            SDL_Event sdlEvent;
 
             // Poll all pending SDL events to check for window focus changes
-            while (SDL.SDL_PollEvent(out sdlEvent) != 0)
+            while (SDL_PollEvent(&sdlEvent))
             {
-                if (sdlEvent.type == SDL.SDL_EventType.SDL_WINDOWEVENT)
+                switch (sdlEvent.Type)
                 {
-                    switch (sdlEvent.window.windowEvent)
-                    {
-                        case SDL.SDL_WindowEventID.SDL_WINDOWEVENT_FOCUS_GAINED:
-                            _isWindowActive = true;
-                            System.Diagnostics.Debug.WriteLine("SDL: Window gained focus");
-                            break;
+                    case SDL_EventType.SDL_EVENT_WINDOW_FOCUS_GAINED:
+                        _isWindowActive = true;
+                        System.Diagnostics.Debug.WriteLine("SDL: Window gained focus");
+                        break;
 
-                        case SDL.SDL_WindowEventID.SDL_WINDOWEVENT_FOCUS_LOST:
-                            _isWindowActive = false;
-                            System.Diagnostics.Debug.WriteLine("SDL: Window lost focus");
-                            break;
-                    }
+                    case SDL_EventType.SDL_EVENT_WINDOW_FOCUS_LOST:
+                        _isWindowActive = false;
+                        System.Diagnostics.Debug.WriteLine("SDL: Window lost focus");
+                        break;
                 }
             }
         }
@@ -835,12 +831,69 @@ namespace QuiverLauncher.Services
                 _gamepadTimer?.Stop();
                 _gamepadTimer = null;
 
-                foreach (var index in _gameControllers.Keys.ToList())
-                    CloseControllerAt(index);
+                foreach (var id in _gameControllers.Keys.ToList())
+                    CloseControllerAt(id);
 
                 if (SdlAvailable)
-                    SDL.SDL_Quit();
+                    SDL_Quit();
                 _disposed = true;
+            }
+        }
+
+        /// <summary>
+        /// Saved bindings use SDL2's button numbers, where the four face buttons follow their printed label on
+        /// Nintendo-style pads (A is the right button). SDL3 numbers them by position (South, East, West, North),
+        /// so each face button is reported as the code of its label to keep existing bindings and on-screen hints
+        /// meaning the same button.
+        /// </summary>
+        internal static int GetButtonCode(SDL_GamepadButton button, SDL_GamepadButtonLabel label) => label switch
+        {
+            SDL_GamepadButtonLabel.SDL_GAMEPAD_BUTTON_LABEL_A or SDL_GamepadButtonLabel.SDL_GAMEPAD_BUTTON_LABEL_CROSS
+                => (int)SDL_GamepadButton.SDL_GAMEPAD_BUTTON_SOUTH,
+            SDL_GamepadButtonLabel.SDL_GAMEPAD_BUTTON_LABEL_B or SDL_GamepadButtonLabel.SDL_GAMEPAD_BUTTON_LABEL_CIRCLE
+                => (int)SDL_GamepadButton.SDL_GAMEPAD_BUTTON_EAST,
+            SDL_GamepadButtonLabel.SDL_GAMEPAD_BUTTON_LABEL_X or SDL_GamepadButtonLabel.SDL_GAMEPAD_BUTTON_LABEL_SQUARE
+                => (int)SDL_GamepadButton.SDL_GAMEPAD_BUTTON_WEST,
+            SDL_GamepadButtonLabel.SDL_GAMEPAD_BUTTON_LABEL_Y or SDL_GamepadButtonLabel.SDL_GAMEPAD_BUTTON_LABEL_TRIANGLE
+                => (int)SDL_GamepadButton.SDL_GAMEPAD_BUTTON_NORTH,
+            _ => (int)button,
+        };
+
+        /// <summary>An open SDL3 gamepad, with the binding code each of <see cref="AllButtons"/> reports.</summary>
+        private sealed unsafe class OpenGamepad
+        {
+            private SDL_Gamepad* _handle;
+
+            private OpenGamepad(SDL_Gamepad* handle)
+            {
+                _handle = handle;
+                Name = SDL_GetGamepadName(handle);
+                ButtonCodes = AllButtons.Select(b => GetButtonCode(b, SDL_GetGamepadButtonLabel(handle, b))).ToArray();
+            }
+
+            public string? Name { get; }
+
+            public int[] ButtonCodes { get; }
+
+            public bool IsConnected => _handle != null && SDL_GamepadConnected(_handle);
+
+            public static OpenGamepad? Open(SDL_JoystickID id)
+            {
+                var handle = SDL_OpenGamepad(id);
+                return handle == null ? null : new OpenGamepad(handle);
+            }
+
+            public bool GetButton(SDL_GamepadButton button) => SDL_GetGamepadButton(_handle, button);
+
+            public short GetAxis(SDL_GamepadAxis axis) => SDL_GetGamepadAxis(_handle, axis);
+
+            public void Close()
+            {
+                if (_handle == null)
+                    return;
+
+                SDL_CloseGamepad(_handle);
+                _handle = null;
             }
         }
 

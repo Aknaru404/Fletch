@@ -11,6 +11,8 @@
 		<FileVersion>3.5.0.0</FileVersion>
 		<Configurations>Debug;Release</Configurations>
 		<Nullable>enable</Nullable>
+		<!-- SDL3-CS passes gamepads as SDL_Gamepad* pointers (Services/InputService.cs). -->
+		<AllowUnsafeBlocks>true</AllowUnsafeBlocks>
 		<ImplicitUsings>enable</ImplicitUsings>
 		<AvaloniaUseCompiledBindingsByDefault>false</AvaloniaUseCompiledBindingsByDefault>
 	</PropertyGroup>
@@ -36,7 +38,7 @@
 		<PackageReference Include="Avalonia" Version="12.1.1" />
 		<PackageReference Include="Avalonia.Themes.Fluent" Version="12.1.1" />
 		<PackageReference Include="Avalonia.Fonts.Inter" Version="12.1.1" />
-		<PackageReference Include="ppy.SDL2-CS" Version="1.0.82" />
+		<PackageReference Include="ppy.SDL3-CS" Version="2026.1002.1" />
 		<PackageReference Include="SharpCompress" Version="0.50.1" />
 		<PackageReference Include="System.Text.Json" Version="10.0.3" />
 		<PackageReference Include="System.Drawing.Common" Version="10.0.3" Condition="'$(QuiverExcludeWindowsDrawing)' != 'true'" />

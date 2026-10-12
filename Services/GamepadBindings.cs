@@ -2,7 +2,7 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Text.Json.Serialization;
-using SDL2;
+using SDL;
 
 namespace QuiverLauncher.Services;
 
@@ -27,6 +27,11 @@ public enum GamepadInputKind
 public sealed class GamepadBinding : IEquatable<GamepadBinding>
 {
     public GamepadInputKind Kind { get; set; }
+
+    /// <summary>
+    /// The button or axis number, saved in settings. Buttons keep SDL2's numbering: 0-3 are the face buttons
+    /// labelled A, B, X and Y (InputService maps SDL3's positional South/East/West/North onto them).
+    /// </summary>
     public int SdlCode { get; set; }
 
     public GamepadBinding()
@@ -39,13 +44,13 @@ public sealed class GamepadBinding : IEquatable<GamepadBinding>
         SdlCode = sdlCode;
     }
 
-    public static GamepadBinding Button(SDL.SDL_GameControllerButton button) =>
+    public static GamepadBinding Button(SDL_GamepadButton button) =>
         new(GamepadInputKind.Button, (int)button);
 
-    public static GamepadBinding AxisPositive(SDL.SDL_GameControllerAxis axis) =>
+    public static GamepadBinding AxisPositive(SDL_GamepadAxis axis) =>
         new(GamepadInputKind.AxisPositive, (int)axis);
 
-    public static GamepadBinding AxisNegative(SDL.SDL_GameControllerAxis axis) =>
+    public static GamepadBinding AxisNegative(SDL_GamepadAxis axis) =>
         new(GamepadInputKind.AxisNegative, (int)axis);
 
     public bool Equals(GamepadBinding? other) =>
@@ -68,35 +73,35 @@ public static class GamepadBindingDefaults
     {
         [GamepadAction.Confirm] =
         [
-            GamepadBinding.Button(SDL.SDL_GameControllerButton.SDL_CONTROLLER_BUTTON_A),
+            GamepadBinding.Button(SDL_GamepadButton.SDL_GAMEPAD_BUTTON_SOUTH),
         ],
         [GamepadAction.Cancel] =
         [
-            GamepadBinding.Button(SDL.SDL_GameControllerButton.SDL_CONTROLLER_BUTTON_B),
+            GamepadBinding.Button(SDL_GamepadButton.SDL_GAMEPAD_BUTTON_EAST),
         ],
         [GamepadAction.Options] =
         [
-            GamepadBinding.Button(SDL.SDL_GameControllerButton.SDL_CONTROLLER_BUTTON_Y),
+            GamepadBinding.Button(SDL_GamepadButton.SDL_GAMEPAD_BUTTON_NORTH),
         ],
         [GamepadAction.NavUp] =
         [
-            GamepadBinding.Button(SDL.SDL_GameControllerButton.SDL_CONTROLLER_BUTTON_DPAD_UP),
-            GamepadBinding.AxisNegative(SDL.SDL_GameControllerAxis.SDL_CONTROLLER_AXIS_LEFTY),
+            GamepadBinding.Button(SDL_GamepadButton.SDL_GAMEPAD_BUTTON_DPAD_UP),
+            GamepadBinding.AxisNegative(SDL_GamepadAxis.SDL_GAMEPAD_AXIS_LEFTY),
         ],
         [GamepadAction.NavDown] =
         [
-            GamepadBinding.Button(SDL.SDL_GameControllerButton.SDL_CONTROLLER_BUTTON_DPAD_DOWN),
-            GamepadBinding.AxisPositive(SDL.SDL_GameControllerAxis.SDL_CONTROLLER_AXIS_LEFTY),
+            GamepadBinding.Button(SDL_GamepadButton.SDL_GAMEPAD_BUTTON_DPAD_DOWN),
+            GamepadBinding.AxisPositive(SDL_GamepadAxis.SDL_GAMEPAD_AXIS_LEFTY),
         ],
         [GamepadAction.NavLeft] =
         [
-            GamepadBinding.Button(SDL.SDL_GameControllerButton.SDL_CONTROLLER_BUTTON_DPAD_LEFT),
-            GamepadBinding.AxisNegative(SDL.SDL_GameControllerAxis.SDL_CONTROLLER_AXIS_LEFTX),
+            GamepadBinding.Button(SDL_GamepadButton.SDL_GAMEPAD_BUTTON_DPAD_LEFT),
+            GamepadBinding.AxisNegative(SDL_GamepadAxis.SDL_GAMEPAD_AXIS_LEFTX),
         ],
         [GamepadAction.NavRight] =
         [
-            GamepadBinding.Button(SDL.SDL_GameControllerButton.SDL_CONTROLLER_BUTTON_DPAD_RIGHT),
-            GamepadBinding.AxisPositive(SDL.SDL_GameControllerAxis.SDL_CONTROLLER_AXIS_LEFTX),
+            GamepadBinding.Button(SDL_GamepadButton.SDL_GAMEPAD_BUTTON_DPAD_RIGHT),
+            GamepadBinding.AxisPositive(SDL_GamepadAxis.SDL_GAMEPAD_AXIS_LEFTX),
         ],
     };
 
@@ -167,9 +172,9 @@ public static class GamepadBindingLabels
 {
     public static string Format(GamepadBinding binding) => binding.Kind switch
     {
-        GamepadInputKind.Button => FormatButton((SDL.SDL_GameControllerButton)binding.SdlCode),
-        GamepadInputKind.AxisPositive => FormatAxis((SDL.SDL_GameControllerAxis)binding.SdlCode, positive: true),
-        GamepadInputKind.AxisNegative => FormatAxis((SDL.SDL_GameControllerAxis)binding.SdlCode, positive: false),
+        GamepadInputKind.Button => FormatButton((SDL_GamepadButton)binding.SdlCode),
+        GamepadInputKind.AxisPositive => FormatAxis((SDL_GamepadAxis)binding.SdlCode, positive: true),
+        GamepadInputKind.AxisNegative => FormatAxis((SDL_GamepadAxis)binding.SdlCode, positive: false),
         _ => "?",
     };
 
@@ -224,40 +229,45 @@ public static class GamepadBindingLabels
         return string.Join("/", labels.Take(4));
     }
 
-    private static string FormatButton(SDL.SDL_GameControllerButton button) => button switch
+    private static string FormatButton(SDL_GamepadButton button) => button switch
     {
-        SDL.SDL_GameControllerButton.SDL_CONTROLLER_BUTTON_A => "A",
-        SDL.SDL_GameControllerButton.SDL_CONTROLLER_BUTTON_B => "B",
-        SDL.SDL_GameControllerButton.SDL_CONTROLLER_BUTTON_X => "X",
-        SDL.SDL_GameControllerButton.SDL_CONTROLLER_BUTTON_Y => "Y",
-        SDL.SDL_GameControllerButton.SDL_CONTROLLER_BUTTON_BACK => "Back",
-        SDL.SDL_GameControllerButton.SDL_CONTROLLER_BUTTON_GUIDE => "Guide",
-        SDL.SDL_GameControllerButton.SDL_CONTROLLER_BUTTON_START => "Start",
-        SDL.SDL_GameControllerButton.SDL_CONTROLLER_BUTTON_LEFTSTICK => "L3",
-        SDL.SDL_GameControllerButton.SDL_CONTROLLER_BUTTON_RIGHTSTICK => "R3",
-        SDL.SDL_GameControllerButton.SDL_CONTROLLER_BUTTON_LEFTSHOULDER => "LB",
-        SDL.SDL_GameControllerButton.SDL_CONTROLLER_BUTTON_RIGHTSHOULDER => "RB",
-        SDL.SDL_GameControllerButton.SDL_CONTROLLER_BUTTON_DPAD_UP => "↑",
-        SDL.SDL_GameControllerButton.SDL_CONTROLLER_BUTTON_DPAD_DOWN => "↓",
-        SDL.SDL_GameControllerButton.SDL_CONTROLLER_BUTTON_DPAD_LEFT => "←",
-        SDL.SDL_GameControllerButton.SDL_CONTROLLER_BUTTON_DPAD_RIGHT => "→",
-        SDL.SDL_GameControllerButton.SDL_CONTROLLER_BUTTON_MISC1 => "Misc",
-        SDL.SDL_GameControllerButton.SDL_CONTROLLER_BUTTON_PADDLE1 => "P1",
-        SDL.SDL_GameControllerButton.SDL_CONTROLLER_BUTTON_PADDLE2 => "P2",
-        SDL.SDL_GameControllerButton.SDL_CONTROLLER_BUTTON_PADDLE3 => "P3",
-        SDL.SDL_GameControllerButton.SDL_CONTROLLER_BUTTON_PADDLE4 => "P4",
-        SDL.SDL_GameControllerButton.SDL_CONTROLLER_BUTTON_TOUCHPAD => "Touch",
+        SDL_GamepadButton.SDL_GAMEPAD_BUTTON_SOUTH => "A",
+        SDL_GamepadButton.SDL_GAMEPAD_BUTTON_EAST => "B",
+        SDL_GamepadButton.SDL_GAMEPAD_BUTTON_WEST => "X",
+        SDL_GamepadButton.SDL_GAMEPAD_BUTTON_NORTH => "Y",
+        SDL_GamepadButton.SDL_GAMEPAD_BUTTON_BACK => "Back",
+        SDL_GamepadButton.SDL_GAMEPAD_BUTTON_GUIDE => "Guide",
+        SDL_GamepadButton.SDL_GAMEPAD_BUTTON_START => "Start",
+        SDL_GamepadButton.SDL_GAMEPAD_BUTTON_LEFT_STICK => "L3",
+        SDL_GamepadButton.SDL_GAMEPAD_BUTTON_RIGHT_STICK => "R3",
+        SDL_GamepadButton.SDL_GAMEPAD_BUTTON_LEFT_SHOULDER => "LB",
+        SDL_GamepadButton.SDL_GAMEPAD_BUTTON_RIGHT_SHOULDER => "RB",
+        SDL_GamepadButton.SDL_GAMEPAD_BUTTON_DPAD_UP => "↑",
+        SDL_GamepadButton.SDL_GAMEPAD_BUTTON_DPAD_DOWN => "↓",
+        SDL_GamepadButton.SDL_GAMEPAD_BUTTON_DPAD_LEFT => "←",
+        SDL_GamepadButton.SDL_GAMEPAD_BUTTON_DPAD_RIGHT => "→",
+        SDL_GamepadButton.SDL_GAMEPAD_BUTTON_MISC1 => "Misc",
+        SDL_GamepadButton.SDL_GAMEPAD_BUTTON_RIGHT_PADDLE1 => "P1",
+        SDL_GamepadButton.SDL_GAMEPAD_BUTTON_LEFT_PADDLE1 => "P2",
+        SDL_GamepadButton.SDL_GAMEPAD_BUTTON_RIGHT_PADDLE2 => "P3",
+        SDL_GamepadButton.SDL_GAMEPAD_BUTTON_LEFT_PADDLE2 => "P4",
+        SDL_GamepadButton.SDL_GAMEPAD_BUTTON_TOUCHPAD => "Touch",
+        SDL_GamepadButton.SDL_GAMEPAD_BUTTON_MISC2 => "Misc 2",
+        SDL_GamepadButton.SDL_GAMEPAD_BUTTON_MISC3 => "Misc 3",
+        SDL_GamepadButton.SDL_GAMEPAD_BUTTON_MISC4 => "Misc 4",
+        SDL_GamepadButton.SDL_GAMEPAD_BUTTON_MISC5 => "Misc 5",
+        SDL_GamepadButton.SDL_GAMEPAD_BUTTON_MISC6 => "Misc 6",
         _ => $"Btn{(int)button}",
     };
 
-    private static string FormatAxis(SDL.SDL_GameControllerAxis axis, bool positive) => axis switch
+    private static string FormatAxis(SDL_GamepadAxis axis, bool positive) => axis switch
     {
-        SDL.SDL_GameControllerAxis.SDL_CONTROLLER_AXIS_LEFTX => positive ? "LS→" : "LS←",
-        SDL.SDL_GameControllerAxis.SDL_CONTROLLER_AXIS_LEFTY => positive ? "LS↓" : "LS↑",
-        SDL.SDL_GameControllerAxis.SDL_CONTROLLER_AXIS_RIGHTX => positive ? "RS→" : "RS←",
-        SDL.SDL_GameControllerAxis.SDL_CONTROLLER_AXIS_RIGHTY => positive ? "RS↓" : "RS↑",
-        SDL.SDL_GameControllerAxis.SDL_CONTROLLER_AXIS_TRIGGERLEFT => "LT",
-        SDL.SDL_GameControllerAxis.SDL_CONTROLLER_AXIS_TRIGGERRIGHT => "RT",
+        SDL_GamepadAxis.SDL_GAMEPAD_AXIS_LEFTX => positive ? "LS→" : "LS←",
+        SDL_GamepadAxis.SDL_GAMEPAD_AXIS_LEFTY => positive ? "LS↓" : "LS↑",
+        SDL_GamepadAxis.SDL_GAMEPAD_AXIS_RIGHTX => positive ? "RS→" : "RS←",
+        SDL_GamepadAxis.SDL_GAMEPAD_AXIS_RIGHTY => positive ? "RS↓" : "RS↑",
+        SDL_GamepadAxis.SDL_GAMEPAD_AXIS_LEFT_TRIGGER => "LT",
+        SDL_GamepadAxis.SDL_GAMEPAD_AXIS_RIGHT_TRIGGER => "RT",
         _ => $"Axis{(int)axis}{(positive ? "+" : "-")}",
     };
 }

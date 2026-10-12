@@ -1,7 +1,7 @@
 using FluentAssertions;
 using QuiverLauncher;
 using QuiverLauncher.Services;
-using SDL2;
+using SDL;
 
 namespace QuiverLauncher.Tests;
 
@@ -14,42 +14,42 @@ public class GamepadBindingsTests
 
         defaults[GamepadAction.Confirm].Should().BeEquivalentTo(
         [
-            GamepadBinding.Button(SDL.SDL_GameControllerButton.SDL_CONTROLLER_BUTTON_A),
+            GamepadBinding.Button(SDL_GamepadButton.SDL_GAMEPAD_BUTTON_SOUTH),
         ]);
         defaults[GamepadAction.Cancel].Should().BeEquivalentTo(
         [
-            GamepadBinding.Button(SDL.SDL_GameControllerButton.SDL_CONTROLLER_BUTTON_B),
+            GamepadBinding.Button(SDL_GamepadButton.SDL_GAMEPAD_BUTTON_EAST),
         ]);
         defaults[GamepadAction.Options].Should().BeEquivalentTo(
         [
-            GamepadBinding.Button(SDL.SDL_GameControllerButton.SDL_CONTROLLER_BUTTON_Y),
+            GamepadBinding.Button(SDL_GamepadButton.SDL_GAMEPAD_BUTTON_NORTH),
         ]);
         defaults[GamepadAction.NavUp].Should().Contain(
-            GamepadBinding.Button(SDL.SDL_GameControllerButton.SDL_CONTROLLER_BUTTON_DPAD_UP));
+            GamepadBinding.Button(SDL_GamepadButton.SDL_GAMEPAD_BUTTON_DPAD_UP));
         defaults[GamepadAction.NavUp].Should().Contain(
-            GamepadBinding.AxisNegative(SDL.SDL_GameControllerAxis.SDL_CONTROLLER_AXIS_LEFTY));
+            GamepadBinding.AxisNegative(SDL_GamepadAxis.SDL_GAMEPAD_AXIS_LEFTY));
         defaults[GamepadAction.NavDown].Should().Contain(
-            GamepadBinding.AxisPositive(SDL.SDL_GameControllerAxis.SDL_CONTROLLER_AXIS_LEFTY));
+            GamepadBinding.AxisPositive(SDL_GamepadAxis.SDL_GAMEPAD_AXIS_LEFTY));
         defaults[GamepadAction.NavLeft].Should().Contain(
-            GamepadBinding.AxisNegative(SDL.SDL_GameControllerAxis.SDL_CONTROLLER_AXIS_LEFTX));
+            GamepadBinding.AxisNegative(SDL_GamepadAxis.SDL_GAMEPAD_AXIS_LEFTX));
         defaults[GamepadAction.NavRight].Should().Contain(
-            GamepadBinding.AxisPositive(SDL.SDL_GameControllerAxis.SDL_CONTROLLER_AXIS_LEFTX));
+            GamepadBinding.AxisPositive(SDL_GamepadAxis.SDL_GAMEPAD_AXIS_LEFTX));
     }
 
     [Fact]
     public void Format_labels_buttons_and_axes()
     {
         GamepadBindingLabels.Format(
-                GamepadBinding.Button(SDL.SDL_GameControllerButton.SDL_CONTROLLER_BUTTON_A))
+                GamepadBinding.Button(SDL_GamepadButton.SDL_GAMEPAD_BUTTON_SOUTH))
             .Should().Be("A");
         GamepadBindingLabels.Format(
-                GamepadBinding.Button(SDL.SDL_GameControllerButton.SDL_CONTROLLER_BUTTON_LEFTSHOULDER))
+                GamepadBinding.Button(SDL_GamepadButton.SDL_GAMEPAD_BUTTON_LEFT_SHOULDER))
             .Should().Be("LB");
         GamepadBindingLabels.Format(
-                GamepadBinding.AxisPositive(SDL.SDL_GameControllerAxis.SDL_CONTROLLER_AXIS_TRIGGERLEFT))
+                GamepadBinding.AxisPositive(SDL_GamepadAxis.SDL_GAMEPAD_AXIS_LEFT_TRIGGER))
             .Should().Be("LT");
         GamepadBindingLabels.Format(
-                GamepadBinding.AxisNegative(SDL.SDL_GameControllerAxis.SDL_CONTROLLER_AXIS_LEFTY))
+                GamepadBinding.AxisNegative(SDL_GamepadAxis.SDL_GAMEPAD_AXIS_LEFTY))
             .Should().Be("LS↑");
     }
 
@@ -57,7 +57,7 @@ public class GamepadBindingsTests
     public void AssignExclusive_removes_binding_from_other_actions()
     {
         var bindings = GamepadBindingDefaults.Create();
-        var aButton = GamepadBinding.Button(SDL.SDL_GameControllerButton.SDL_CONTROLLER_BUTTON_A);
+        var aButton = GamepadBinding.Button(SDL_GamepadButton.SDL_GAMEPAD_BUTTON_SOUTH);
 
         GamepadBindingDefaults.AssignExclusive(bindings, GamepadAction.Cancel, aButton);
 
@@ -75,7 +75,7 @@ public class GamepadBindingsTests
         GamepadBindingDefaults.AssignExclusive(
             bindings,
             GamepadAction.Confirm,
-            GamepadBinding.Button(SDL.SDL_GameControllerButton.SDL_CONTROLLER_BUTTON_RIGHTSHOULDER));
+            GamepadBinding.Button(SDL_GamepadButton.SDL_GAMEPAD_BUTTON_RIGHT_SHOULDER));
 
         var updated = GamepadBindingLabels.FormatHints(bindings);
         updated.Should().Contain("RB (Select)");
