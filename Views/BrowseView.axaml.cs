@@ -151,13 +151,20 @@ public partial class BrowseView : UserControl
 
     /// <summary>
     /// The website's phone layout: the title and count with the sort beside them, the search across the width, the
-    /// four filters two by two, then the cards two to a row filling the width.
+    /// four filters two by two, then the cards two to a row filling the width. The title, search and filters scroll
+    /// with the cards, so a short screen (a handheld held sideways) isn't left with a strip of cards under them.
     /// </summary>
     public void ApplyMobileLayout()
     {
         if (IsMobileLayout) return;
         IsMobileLayout = true;
         Classes.Add("mobile");
+        Surface.Children.Remove(BrowseToolbarPanel);
+        Surface.Children.Remove(BrowseFiltersPanel);
+        BrowseContentStack.Children.Insert(0, BrowseToolbarPanel);
+        BrowseContentStack.Children.Insert(1, BrowseFiltersPanel);
+        Grid.SetRow(BrowseScrollViewer, 0);
+        Grid.SetRowSpan(BrowseScrollViewer, 3);
         BrowseContentStack.Margin = new Thickness(0);
         BrowseToolbarPanel.Margin = new Thickness(0, 0, 0, 12);
         BrowseFiltersPanel.Margin = new Thickness(0, 0, 0, 14);
