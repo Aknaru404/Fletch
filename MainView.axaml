@@ -196,14 +196,14 @@
 							<Image Width="32" Height="32"
 								   Source="avares://QuiverLauncher/Assets/Discord.png"/>
 						</Button>
-						<Button x:Name="KofiFooterButton"
+						<Button x:Name="PatreonFooterButton"
 								Classes="iconbutton"
 								Width="44"
 								Height="44"
-								ToolTip.Tip="Ko-fi"
-								Click="KofiButton_Click">
+								ToolTip.Tip="Support Quiver on Patreon"
+								Click="PatreonButton_Click">
 							<Image Width="32" Height="32"
-								   Source="avares://QuiverLauncher/Assets/Kofi.png"/>
+								   Source="avares://QuiverLauncher/Assets/Patreon.png"/>
 						</Button>
 					</StackPanel>
 				</StackPanel>
