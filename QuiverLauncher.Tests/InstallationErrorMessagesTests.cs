@@ -83,4 +83,28 @@ public class InstallationErrorMessagesTests
         result.Should().Contain("scanning the downloaded archive");
         result.Should().NotContain("Protection history");
     }
+
+    [Fact]
+    public void Windows_security_block_is_recognised_in_any_language()
+    {
+        // Portuguese Windows: "vírus" doesn't contain "virus".
+        var blocked = new IOException("Não foi possível concluir a operação com êxito porque o arquivo contém um vírus.",
+            unchecked((int)0x800700E1));
+        InstallationErrorMessages.IsLikelyWindowsDefenderBlock(blocked.Message).Should().BeFalse();
+        InstallationErrorMessages.HasErrorCode(blocked, unchecked((int)0x800700E1)).Should().BeTrue();
+
+        if (!RuntimeInformation.IsOSPlatform(OSPlatform.Windows))
+            return;
+
+        InstallationErrorMessages.FormatInstallationError("Skate 3", blocked).Should().Contain("Protection history");
+    }
+
+    [Fact]
+    public void Error_codes_are_found_on_wrapped_exceptions()
+    {
+        var locked = new InvalidOperationException("Extraction failed",
+            new IOException("Der Prozess kann nicht auf die Datei zugreifen.", unchecked((int)0x80070020)));
+        InstallationErrorMessages.HasErrorCode(locked, unchecked((int)0x80070020)).Should().BeTrue();
+        InstallationErrorMessages.HasErrorCode(new IOException("other"), unchecked((int)0x80070020)).Should().BeFalse();
+    }
 }

@@ -528,7 +528,7 @@ public static class GameDownloadInstallService
             if (ex is not OperationCanceledException)
                 Telemetry.Current.CaptureException(ex, handled: true, "app_install");
             await dialogs.ShowErrorAsync(
-                InstallationErrorMessages.FormatInstallationError(game.Name, ex.Message),
+                InstallationErrorMessages.FormatInstallationError(game.Name, ex),
                 "Installation Error");
             ResetNotInstalled(game);
         }

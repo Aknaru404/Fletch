@@ -1,3 +1,4 @@
+using System.Runtime.InteropServices;
 using FluentAssertions;
 using QuiverLauncher.Core.Models;
 using QuiverLauncher.Core.Services;
@@ -344,5 +345,63 @@ public class DownloadAssetPolicyTests
     public void Auxiliary_detection_does_not_reject_titles_containing_similar_words()
     {
         DownloadAssetPolicy.Select(Release("ChecksumQuest-Windows.zip"), "Windows").Automatic.Should().NotBeNull();
+    }
+
+    [Theory]
+    [InlineData("Windows", "Dusklight-v2.0.3-win32-arm64.zip", "Dusklight-v2.0.3-win32-x86_64.zip")]
+    [InlineData("Windows", "SymphonyRecomp-v0.5.1b-windows-arm64.zip", "SymphonyRecomp-v0.5.1b-windows-x64.zip")]
+    [InlineData("Windows", "Melee-Windows-x86_64.zip", "Melee-Windows-arm64.zip")]
+    [InlineData("macOS", "Game-macos-arm64.zip", "Game-macos-x64.zip")]
+    public void An_x64_computer_installs_the_x64_build_without_asking(string platform, string first, string second)
+    {
+        var choices = DownloadAssetPolicy.Select(Release(first, second), platform, machine: Architecture.X64);
+        choices.NeedsChoice.Should().BeFalse();
+        DownloadAssetPolicy.ProcessorOf(choices.Automatic!.name).Should().Be(Architecture.X64);
+    }
+
+    [Theory]
+    [InlineData("Windows", "SymphonyRecomp-v0.5.1b-windows-arm64.zip", "SymphonyRecomp-v0.5.1b-windows-x64.zip")]
+    [InlineData("macOS", "Game-macos-x64.zip", "Game-macos-arm64.zip")]
+    public void An_arm64_computer_installs_the_arm64_build_without_asking(string platform, string first, string second)
+    {
+        var choices = DownloadAssetPolicy.Select(Release(first, second), platform, machine: Architecture.Arm64);
+        DownloadAssetPolicy.ProcessorOf(choices.Automatic!.name).Should().Be(Architecture.Arm64);
+    }
+
+    [Fact]
+    public void An_arm64_computer_keeps_x64_builds_when_there_is_no_arm64_one()
+    {
+        var choices = DownloadAssetPolicy.Select(Release("Game-windows-x64.zip"), "Windows", machine: Architecture.Arm64);
+        choices.Automatic!.name.Should().Be("Game-windows-x64.zip");
+    }
+
+    [Fact]
+    public void Builds_that_do_not_name_a_processor_stay_on_offer()
+    {
+        var choices = DownloadAssetPolicy.Select(Release("Game-windows.zip", "Game-windows-arm64.zip", "Game-windows-x64.zip"),
+            "Windows", machine: Architecture.X64);
+        choices.Eligible.Select(a => a.name).Should().BeEquivalentTo("Game-windows.zip", "Game-windows-x64.zip");
+    }
+
+    [Fact]
+    public void A_release_with_only_an_arm64_build_still_offers_it()
+    {
+        var choices = DownloadAssetPolicy.Select(Release("Game-windows-arm64.zip"), "Windows", machine: Architecture.X64);
+        choices.Automatic!.name.Should().Be("Game-windows-arm64.zip");
+    }
+
+    [Theory]
+    [InlineData("Game-windows-arm64.zip", Architecture.Arm64)]
+    [InlineData("Game-aarch64-macos.zip", Architecture.Arm64)]
+    [InlineData("Game-win32-x86_64.zip", Architecture.X64)]
+    [InlineData("Game-win64.zip", Architecture.X64)]
+    [InlineData("Game-x86-setup.exe", Architecture.X64)]
+    [InlineData("Game-windows.zip", null)]
+    [InlineData("Harmony-windows.zip", null)]
+    [InlineData("Game-macos-universal.zip", null)]
+    [InlineData("Game-macos-arm64-x64.zip", null)]
+    public void Processor_is_read_from_the_file_name(string name, Architecture? expected)
+    {
+        DownloadAssetPolicy.ProcessorOf(name).Should().Be(expected);
     }
 }
