@@ -1,22 +1,19 @@
-# Quiver Launcher 3.5.1-rc.2
+# Quiver Launcher 3.5.1-rc.3
 
 This is a prerelease for testing before 3.5.1.
 
-## New since rc.1
+## New since rc.2
 
-- Controllers now go through SDL3 on every desktop build. Please try your pads, including on Steam Deck, Linux and Mac.
-- Apps from codeberg.org can be added and updated.
-- Update checks run several apps at once, so a big library finishes much faster.
-- When a release has several downloads, updates pick the one matching the build you installed instead of asking every time.
-- Rolling releases, like nightly builds, are offered again when they're rebuilt under the same tag.
-- Updating or deleting an app in a folder you chose no longer touches your other files in that folder.
-- An app's page keeps its scroll position when you switch back to Quiver.
-- On Android, the App Catalog's search and filters scroll away with the cards.
+- When a Windows or Mac release has both an x64 and an ARM64 download, Quiver installs the one made for your computer's processor. Before, x64 PCs and Intel Macs often got the ARM64 build, which won't start.
+- On a Steam Deck, pressing A or B no longer counts twice when Steam also types Enter or Escape for it, so checkboxes, dropdowns and text fields respond normally.
+- On short windows, like a Steam Deck screen, the App Catalog's search and filters scroll away with the cards.
+- The sidebar's support button now goes to Patreon instead of Ko-fi.
 
 ## Controllers
 
 - Controller input now uses SDL3 on Windows, Linux and macOS. Linux ARM64 gets controller support for the first time, and Linux x64 and Intel Macs move to a much newer SDL, so more recent gamepads are recognised.
 - Your saved buttons stay as they were, including the A/B layout on Nintendo pads. On Steam Deck, the controller and lizard mode work as before.
+- On a Steam Deck, a button press counts once even when Steam also types its key, so A no longer toggles a checkbox straight back or opens and closes a dropdown.
 
 ## Safer installs and updates
 
@@ -25,6 +22,8 @@ This is a prerelease for testing before 3.5.1.
 - When a developer removes or replaces a release file, Quiver says so and offers the newest other verified release.
 - Rolling releases, like nightly builds, are offered as an update when they're rebuilt under the same tag, and install again when the file matches the one GitHub publishes.
 - When a release has several downloads, Update installs the one that matches the build you have, with only the version changed. If no single file matches, you still pick, and the matching file is listed first as "(Same build as installed)". Apps installed before this version ask once more on their next update.
+- When a Windows or Mac release has both x64 and ARM64 downloads, Quiver installs the one for your computer's processor. ARM64 computers still get the x64 build when there is no ARM64 one.
+- When Windows Security blocks a file or a file is locked, Quiver explains it whatever language Windows is in.
 - For an app in a folder you chose, an AppImage update replaces only the file Quiver installed, and deleting the app moves only that file to the Trash. Before, other AppImages in that folder could be removed.
 
 ## Update checks and tokens
@@ -57,6 +56,8 @@ This is a prerelease for testing before 3.5.1.
 
 ## Other improvements and fixes
 
+- On short desktop windows, like a Steam Deck screen, the App Catalog's title, search and filters scroll away with the cards, and come back when the window is made taller.
+- The sidebar's support button opens Quiver's Patreon page instead of Ko-fi.
 - Switching away from Quiver and back keeps an app's page where you'd scrolled it, with the mouse, keyboard or a controller.
 - Sub-menus follow your theme instead of opening dark grey.
 - The **Release asset filter** accepts wildcards: `*` for any text and `?` for one character, like `*portable*x64*`. Plain text still matches anywhere in the file name.
