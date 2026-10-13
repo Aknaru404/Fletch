@@ -297,7 +297,10 @@ namespace QuiverLauncher.Services
             _gamepadTimer.Start();
         }
 
-        private void GamepadTimer_Tick(object? sender, EventArgs e)
+        private void GamepadTimer_Tick(object? sender, EventArgs e) => PollGamepads();
+
+        /// <summary>Reads every open pad once and raises the actions it pressed. Runs on each timer tick.</summary>
+        internal void PollGamepads()
         {
             if (!SdlAvailable)
                 return;
@@ -351,7 +354,8 @@ namespace QuiverLauncher.Services
                     if ((now - _lastConfirmTime).TotalMilliseconds > ButtonRepeatDelay)
                     {
                         _lastConfirmTime = now;
-                        if (!TryHandleOverlayConfirm())
+                        if (PressEchoFilter.Instance.TryAccept(GamepadAction.Confirm, PressSource.Gamepad) &&
+                            !TryHandleOverlayConfirm())
                             OnConfirm?.Invoke();
                     }
                 }
@@ -362,7 +366,8 @@ namespace QuiverLauncher.Services
                     if ((now - _lastCancelTime).TotalMilliseconds > ButtonRepeatDelay)
                     {
                         _lastCancelTime = now;
-                        if (!TryHandleOverlayCancel())
+                        if (PressEchoFilter.Instance.TryAccept(GamepadAction.Cancel, PressSource.Gamepad) &&
+                            !TryHandleOverlayCancel())
                             OnCancel?.Invoke();
                     }
                 }
@@ -373,7 +378,8 @@ namespace QuiverLauncher.Services
                     if ((now - _lastOptionsTime).TotalMilliseconds > ButtonRepeatDelay)
                     {
                         _lastOptionsTime = now;
-                        OnOptions?.Invoke();
+                        if (PressEchoFilter.Instance.TryAccept(GamepadAction.Options, PressSource.Gamepad))
+                            OnOptions?.Invoke();
                     }
                 }
             }

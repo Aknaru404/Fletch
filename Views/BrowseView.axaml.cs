@@ -35,6 +35,10 @@ public partial class BrowseView : UserControl
     public BrowseViewModel Model { get; private set; } = null!;
     /// <summary>Laid out for a phone, like the website's narrow layout.</summary>
     internal bool IsMobileLayout { get; private set; }
+    // A page shorter than this (a Steam Deck, a small window) has the title, search and filters scroll with the cards.
+    private const double ControlsScrollHeight = 720;
+    /// <summary>The title, search and filters scroll with the cards, rather than staying above them.</summary>
+    internal bool ControlsScroll { get; private set; }
     public BrowseNavigation Navigation { get; private set; } = null!;
     public event Action<BrowseItem>? DetailsRequested;
     /// <summary>A matched game was opened: its page compares the apps that play it.</summary>
@@ -62,6 +66,10 @@ public partial class BrowseView : UserControl
         BrowseFiltersPanel.SizeChanged += (_, e) => ArrangeFilters(e.NewSize.Width);
         BrowseToolbarPanel.SizeChanged += (_, e) => ArrangeHideOption(e.NewSize.Width);
         BrowseItemsControl.SizeChanged += (_, e) => ArrangeCards(e.NewSize.Width);
+        SizeChanged += (_, e) =>
+        {
+            if (!IsMobileLayout && e.NewSize.Height > 0) SetControlsScroll(e.NewSize.Height < ControlsScrollHeight);
+        };
         AddHandler(BrowseCard.AddRequestedEvent, (_, e) =>
         {
             if (e.Source is not Control { DataContext: BrowseItem item }) return;
@@ -159,12 +167,7 @@ public partial class BrowseView : UserControl
         if (IsMobileLayout) return;
         IsMobileLayout = true;
         Classes.Add("mobile");
-        Surface.Children.Remove(BrowseToolbarPanel);
-        Surface.Children.Remove(BrowseFiltersPanel);
-        BrowseContentStack.Children.Insert(0, BrowseToolbarPanel);
-        BrowseContentStack.Children.Insert(1, BrowseFiltersPanel);
-        Grid.SetRow(BrowseScrollViewer, 0);
-        Grid.SetRowSpan(BrowseScrollViewer, 3);
+        SetControlsScroll(true);
         BrowseContentStack.Margin = new Thickness(0);
         BrowseToolbarPanel.Margin = new Thickness(0, 0, 0, 12);
         BrowseFiltersPanel.Margin = new Thickness(0, 0, 0, 14);
@@ -187,6 +190,26 @@ public partial class BrowseView : UserControl
         BrowseItemsControl.ItemsPanel = new FuncTemplate<Panel?>(() => new CardColumnsPanel());
         BrowseItemsControl.Classes.Add("narrow-cards");
         UpdateControls();
+    }
+
+    /// <summary>
+    /// Puts the title, search and filters at the top of the scrolling area, so on a short screen scrolling down gives the
+    /// cards the whole height (a controller's Up from the cards brings them back into view); or back above the cards.
+    /// </summary>
+    private void SetControlsScroll(bool scroll)
+    {
+        if (scroll == ControlsScroll) return;
+        ControlsScroll = scroll;
+        Panel from = scroll ? Surface : BrowseContentStack, to = scroll ? BrowseContentStack : Surface;
+        from.Children.Remove(BrowseToolbarPanel);
+        from.Children.Remove(BrowseFiltersPanel);
+        to.Children.Insert(0, BrowseToolbarPanel);
+        to.Children.Insert(1, BrowseFiltersPanel);
+        Grid.SetRow(BrowseScrollViewer, scroll ? 0 : 2);
+        Grid.SetRowSpan(BrowseScrollViewer, scroll ? 3 : 1);
+        // The cards' margin keeps the scroll bar clear; inside the scrolling area the controls share it.
+        foreach (var panel in new Control[] { BrowseToolbarPanel, BrowseFiltersPanel })
+            panel.Margin = new Thickness(0, 0, scroll ? 0 : BrowseContentStack.Margin.Right, panel.Margin.Bottom);
     }
 
     private ComboBox[] FilterCombos => [BrowseTypeComboBox, BrowsePlatformComboBox, BrowseConsoleComboBox, BrowseAiComboBox];
