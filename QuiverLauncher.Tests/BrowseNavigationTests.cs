@@ -351,6 +351,58 @@ public class BrowseNavigationTests
         }
     }
 
+    [AvaloniaFact]
+    public async Task On_a_short_desktop_window_the_catalog_controls_scroll_with_the_cards_and_stay_above_them_when_taller()
+    {
+        var root = Path.Combine(Path.GetTempPath(), "quiver-browse-short-" + Guid.NewGuid().ToString("N"));
+        var previousRoot = QuiverLauncherPaths.OverrideUserDataRoot;
+        Directory.CreateDirectory(root);
+        QuiverLauncherPaths.OverrideUserDataRoot = root;
+        var store = new Store();
+        store.Current.AppsPath = Path.Combine(root, "Apps");
+        using var http = new HttpClient(new Site());
+        var manager = new GameManager(store, http) { UiThreadInvoker = action => Dispatcher.UIThread.InvokeAsync(action).GetTask() };
+        var view = new MainView(new() { SettingsStore = store, GameManager = manager, InitializeOnOpen = false, EnableInput = false, EnableMusic = false });
+        // The Steam Deck's screen.
+        var window = new Window { Content = view, Width = 1280, Height = 800 };
+        var browse = view.FindControl<BrowseView>("BrowsePanel")!;
+        var scroller = browse.BrowseScrollViewer;
+        double Top(Control control) => control.TranslatePoint(default, scroller)!.Value.Y;
+        try
+        {
+            window.Show(); Dispatcher.UIThread.RunJobs();
+            view.FindControl<Button>("BrowseNavButton")!.RaiseEvent(new RoutedEventArgs(Button.ClickEvent));
+            await Until(() => browse.Model.Items.Count == 3);
+            window.UpdateLayout();
+
+            // The title, search and filters (158 of the page's 690 points here) are the top of the scrolling area, so they
+            // scroll up out of the way with the cards.
+            browse.ControlsScroll.Should().BeTrue();
+            Top(browse.BrowseToolbarPanel).Should().BeApproximately(0, 1);
+            Top(browse.BrowseItemsControl).Should().BeGreaterThan(Top(browse.BrowseFiltersPanel) + browse.BrowseFiltersPanel.Bounds.Height - 1);
+            // They line up with the cards, clear of the scroll bar.
+            browse.BrowseFiltersPanel.Bounds.Width.Should().BeApproximately(browse.BrowseItemsControl.Bounds.Width, 1);
+
+            // A taller window keeps them above the cards, as before.
+            window.Height = 1040;
+            Dispatcher.UIThread.RunJobs();
+            window.UpdateLayout();
+            browse.ControlsScroll.Should().BeFalse();
+            Top(browse.BrowseItemsControl).Should().BeApproximately(-scroller.Offset.Y, 1);
+            browse.BrowseFiltersPanel.TranslatePoint(default, scroller)!.Value.Y.Should().BeLessThan(0);
+            browse.BrowseFiltersPanel.Bounds.Width.Should().BeApproximately(browse.BrowseItemsControl.Bounds.Width, 1);
+        }
+        finally
+        {
+            window.Close();
+            await view.ShutdownAsync();
+            manager.Dispose();
+            GamepadFocusChrome.SetKeyboardNavigationActive(false);
+            QuiverLauncherPaths.OverrideUserDataRoot = previousRoot;
+            TestFixtures.CleanupDirectory(root);
+        }
+    }
+
     private static object? Shell(MainView view, string method, params object[] args) =>
         typeof(MainView).GetMethod(method, BindingFlags.Instance | BindingFlags.NonPublic)!.Invoke(view, args);
 
