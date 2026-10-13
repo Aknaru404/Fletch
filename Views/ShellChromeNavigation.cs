@@ -29,7 +29,7 @@ public sealed class ShellChromeNavigation : IFeatureNavigationHandler
     private readonly Button WebsiteFooterButton;
     private readonly Button GitHubFooterButton;
     private readonly Button DiscordFooterButton;
-    private readonly Button KofiFooterButton;
+    private readonly Button PatreonFooterButton;
     private readonly Button MobileSearchToggleButton;
     private readonly Button MobileAddButton;
     private readonly Button MobileSortButton;
@@ -59,7 +59,7 @@ public sealed class ShellChromeNavigation : IFeatureNavigationHandler
         WebsiteFooterButton = root.FindControl<Button>("WebsiteFooterButton")!;
         GitHubFooterButton = root.FindControl<Button>("GitHubFooterButton")!;
         DiscordFooterButton = root.FindControl<Button>("DiscordFooterButton")!;
-        KofiFooterButton = root.FindControl<Button>("KofiFooterButton")!;
+        PatreonFooterButton = root.FindControl<Button>("PatreonFooterButton")!;
         MobileSearchToggleButton = root.FindControl<Button>("MobileSearchToggleButton")!;
         MobileAddButton = root.FindControl<Button>("MobileAddButton")!;
         MobileSortButton = root.FindControl<Button>("MobileSortButton")!;
@@ -263,7 +263,7 @@ public sealed class ShellChromeNavigation : IFeatureNavigationHandler
     {
         for (var i = 0; i < controls.Count; i++)
         {
-            if (ReferenceEquals(controls[i], WebsiteFooterButton) || ReferenceEquals(controls[i], GitHubFooterButton) || ReferenceEquals(controls[i], DiscordFooterButton) || ReferenceEquals(controls[i], KofiFooterButton))
+            if (ReferenceEquals(controls[i], WebsiteFooterButton) || ReferenceEquals(controls[i], GitHubFooterButton) || ReferenceEquals(controls[i], DiscordFooterButton) || ReferenceEquals(controls[i], PatreonFooterButton))
             {
                 return i;
             }
@@ -337,7 +337,7 @@ public sealed class ShellChromeNavigation : IFeatureNavigationHandler
         Add(WebsiteFooterButton);
         Add(GitHubFooterButton);
         Add(DiscordFooterButton);
-        Add(KofiFooterButton);
+        Add(PatreonFooterButton);
         return controls;
     }
 

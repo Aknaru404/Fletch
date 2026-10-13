@@ -1644,17 +1644,17 @@ namespace QuiverLauncher
             }
         }
 
-        private void KofiButton_Click(object sender, RoutedEventArgs e)
+        private void PatreonButton_Click(object sender, RoutedEventArgs e)
         {
             if (KioskLocked)
                 return;
             try
             {
-                OpenUrl("https://ko-fi.com/magicturt1e");
+                OpenUrl("https://www.patreon.com/c/quiverlauncher");
             }
             catch (Exception ex)
             {
-                _ = _session.RunAsync(() => ShowMessageBoxAsync($"Failed to open Ko-fi link: {ex.Message}", "Action Error"));
+                _ = _session.RunAsync(() => ShowMessageBoxAsync($"Failed to open Patreon link: {ex.Message}", "Action Error"));
             }
         }
 
