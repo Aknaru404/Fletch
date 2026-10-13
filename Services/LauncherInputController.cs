@@ -46,6 +46,8 @@ public sealed class LauncherInputController : IDisposable
         };
         GamepadContextMenuNavigation.Instance.ResolveKeyboardAction = _keyboardActionResolver;
         GamepadModalDialogNavigation.Instance.ResolveKeyboardAction = _keyboardActionResolver;
+        PressEchoFilter.Instance.ResolveKeyboardAction = _keyboardActionResolver;
+        PressEchoFilter.InstallKeyboardHook();
         GamepadModalDialogNavigation.Instance.OnKeyboardNavigationActivated = actions.ActivateKeyboardChrome;
         view.AddHandler(InputElement.KeyDownEvent, MainWindow_KeyDown, RoutingStrategies.Tunnel);
         view.AddHandler(InputElement.KeyUpEvent, MainWindow_KeyUp, RoutingStrategies.Tunnel);
@@ -69,6 +71,8 @@ public sealed class LauncherInputController : IDisposable
             GamepadContextMenuNavigation.Instance.ResolveKeyboardAction = null;
         if (GamepadModalDialogNavigation.Instance.ResolveKeyboardAction == _keyboardActionResolver)
             GamepadModalDialogNavigation.Instance.ResolveKeyboardAction = null;
+        if (PressEchoFilter.Instance.ResolveKeyboardAction == _keyboardActionResolver)
+            PressEchoFilter.Instance.ResolveKeyboardAction = null;
         if (GamepadModalDialogNavigation.Instance.OnKeyboardNavigationActivated == _actions.ActivateKeyboardChrome)
             GamepadModalDialogNavigation.Instance.OnKeyboardNavigationActivated = null;
         if (Service is { } input)
@@ -145,6 +149,10 @@ public sealed class LauncherInputController : IDisposable
 
         private void MainWindow_KeyDown(object? sender, KeyEventArgs e)
         {
+            // Only PressEchoFilter runs ahead of this handler: it dropped a key Steam typed for a controller press.
+            if (e.Handled)
+                return;
+
             if (_isProcessingInput || !_hostActive() || _disposed)
                 return;
 
