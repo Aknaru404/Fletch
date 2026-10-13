@@ -1,3 +1,4 @@
+using System.Runtime.InteropServices;
 using System.Text.RegularExpressions;
 using QuiverLauncher.Core.Models;
 
@@ -20,7 +21,9 @@ public static class DownloadAssetPolicy
         Regex.IsMatch(name, @"(?:\.(?:sha(?:1|224|256|384|512)?|md5|sig|asc|minisig|signature|debug)(?:\.txt)?$)|(?:^|[._-])(?:checksums?|sha(?:1|224|256|384|512)?sums?|md5sums?|pdb|dsym|symbols|debugsymbols|debug[._-]symbols)(?:$|[._-])",
             RegexOptions.IgnoreCase | RegexOptions.CultureInvariant);
 
-    public static DownloadAssetSelection Select(GitHubRelease release, string platform, string? filter = null)
+    /// <param name="machine">The processor the download will run on; by default the one in this computer.</param>
+    public static DownloadAssetSelection Select(GitHubRelease release, string platform, string? filter = null,
+        Architecture? machine = null)
     {
         var all = GitHubReleaseService.GetDownloadableAssets(release);
         var filtered = GitHubReleaseService.GetDownloadableAssets(release, filter);
@@ -28,6 +31,8 @@ public static class DownloadAssetPolicy
         var eligible = filtered.Where(a => PlatformAssetMatcher.MatchesPlatform(a.name, platform) ||
             linux && PlatformAssetMatcher.IsWindowsAsset(a.name))
             .OrderByDescending(a => PlatformAssetMatcher.MatchesPlatform(a.name, platform)).ToList();
+        if (!linux)
+            eligible = ForProcessor(eligible, machine ?? DefaultProcessor(platform));
         var uncertain = filtered.Where(a => !HasKnownPlatform(a.name)).ToList();
         var reason = eligible.Count > 0 ? null : all.Count == 0 ? "This release has no installable download files." :
             filtered.Count == 0 ? $"No download files match the release asset filter \"{filter}\"." :
@@ -71,6 +76,42 @@ public static class DownloadAssetPolicy
         }
         return DottedVersion.Replace(name, VersionMark);
     }
+
+    /// <summary>
+    /// Windows and Mac releases often ship an ARM64 build next to the x64 one, and the ARM64 one won't start on an
+    /// x64 computer ("not a valid application for this OS platform", "Bad CPU type"). Keeps the builds made for
+    /// <paramref name="machine"/>, plus those that don't say, whenever there are any; otherwise leaves the list alone.
+    /// Linux's own platforms already tell ARM64 apart.
+    /// </summary>
+    internal static List<GitHubAsset> ForProcessor(List<GitHubAsset> assets, Architecture machine)
+    {
+        // An ARM64 computer can run x64 builds through emulation, so they stay when there is no ARM64 one.
+        var wanted = machine is Architecture.Arm64 or Architecture.Arm ? Architecture.Arm64 : Architecture.X64;
+        var fits = assets.Where(a => ProcessorOf(a.name) is not { } processor || processor == wanted).ToList();
+        return fits.Count > 0 ? fits : assets;
+    }
+
+    private static readonly Regex ArmName = new(@"(?:^|[^a-z0-9])(?:arm64|aarch64|armv8|arm)(?:$|[^a-z0-9])",
+        RegexOptions.IgnoreCase | RegexOptions.CultureInvariant);
+    private static readonly Regex X64Name = new(@"(?:^|[^a-z0-9])(?:x64|x86[_-]64|amd64|win64|x86|i386|i686)(?:$|[^a-z0-9])",
+        RegexOptions.IgnoreCase | RegexOptions.CultureInvariant);
+
+    /// <summary>Arm64 for an ARM build, X64 for an Intel/AMD one (32-bit included), null when the name doesn't say or says both.</summary>
+    internal static Architecture? ProcessorOf(string name)
+    {
+        var armBuild = ArmName.IsMatch(name);
+        var intelBuild = X64Name.IsMatch(name);
+        return armBuild == intelBuild ? null : armBuild ? Architecture.Arm64 : Architecture.X64;
+    }
+
+    /// <summary>
+    /// This computer's processor, except for a Windows download on a Mac or Linux PC: Wine, Proton and CrossOver
+    /// run x64 Windows apps, also on Apple silicon, but not ARM64 ones.
+    /// </summary>
+    private static Architecture DefaultProcessor(string platform) =>
+        platform.Equals("Windows", StringComparison.OrdinalIgnoreCase) && !OperatingSystem.IsWindows()
+            ? Architecture.X64
+            : RuntimeInformation.OSArchitecture;
 
     private static bool HasKnownPlatform(string name) => PlatformAssetMatcher.IsIosAsset(name) ||
         PlatformAssetMatcher.IsDedicatedDeviceAsset(name) || PlatformAssetMatcher.IsWindowsAsset(name) ||
