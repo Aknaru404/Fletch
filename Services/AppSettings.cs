@@ -79,6 +79,7 @@ namespace QuiverLauncher
         public int? ListRowHeight { get; set; }
         public int ActionButtonSize { get; set; } = 36;
         public bool ShowOSTopBar { get; set; } = false;
+        public bool HideWindowControls { get; set; } = false;
         public int InterfaceScalePercent { get; set; } = 100;
         public bool DesktopSidebarCollapsed { get; set; }
         public string PrimaryColor { get; set; } = "#18181b";

@@ -79,7 +79,8 @@ namespace QuiverLauncher
         public bool ShowCatalogNavigation => !KioskLocked;
         public bool ShowExternalLinks => !KioskLocked;
         public bool ShowUpdateCheckButton => !KioskLocked;
-        public bool ShowWindowChromeButtons => IsDesktopPlatform && !KioskLocked;
+        public bool ShowWindowChromeButtons => IsDesktopPlatform && !KioskLocked
+            && !(_settings.ShowOSTopBar && _settings.HideWindowControls);
         public bool ShowMinimizeButton => ShowWindowChromeButtons && !SteamDeckEnvironment.IsGamingMode();
         public string MaximizeButtonTip => GetHostWindowState()is WindowState.Maximized or WindowState.FullScreen ? "Restore" : "Maximize";
         public bool IsMobile => PlatformCapabilities.IsMobile;
@@ -601,6 +602,7 @@ namespace QuiverLauncher
         void ISettingsFeatureHost.NotifyPresentationChanged()
         {
             Shell.RefreshPresentation(_settings);
+            ApplyWindowControlsVisibility();
             _music.Path = _settings.LauncherMusicPath ?? string.Empty;
             _music.Volume = _settings.MusicVolume;
             UpdateThemeColors();
@@ -658,15 +660,11 @@ namespace QuiverLauncher
         {
             OnPropertyChanged(nameof(KioskLocked));
             OnPropertyChanged(nameof(ShowSettingsButton));
-            OnPropertyChanged(nameof(ShowMinimizeButton));
-            OnPropertyChanged(nameof(ShowWindowChromeButtons));
+            ApplyWindowControlsVisibility();
             OnPropertyChanged(nameof(ShowUpdateCheckButton));
             OnPropertyChanged(nameof(ShowCatalogNavigation));
             OnPropertyChanged(nameof(ShowExternalLinks));
             if (SettingsButton != null) SettingsButton.IsVisible = ShowSettingsButton;
-            if (MinimizeButton != null) MinimizeButton.IsVisible = ShowMinimizeButton;
-            if (ToggleMaximizeButton != null) ToggleMaximizeButton.IsVisible = ShowWindowChromeButtons;
-            if (CloseLauncherButton != null) CloseLauncherButton.IsVisible = ShowWindowChromeButtons;
             if (CheckForUpdatesButton != null) CheckForUpdatesButton.IsVisible = ShowUpdateCheckButton;
             if (BrowseNavButton != null) BrowseNavButton.IsVisible = ShowCatalogNavigation;
             if (ExternalLinksHost != null) ExternalLinksHost.IsVisible = ShowExternalLinks;
@@ -679,6 +677,15 @@ namespace QuiverLauncher
             Library?.ApplyDisplaySettings();
             if (refreshShell && _appearance != null)
                 UpdateMainViewUi();
+        }
+
+        private void ApplyWindowControlsVisibility()
+        {
+            OnPropertyChanged(nameof(ShowMinimizeButton));
+            OnPropertyChanged(nameof(ShowWindowChromeButtons));
+            if (MinimizeButton != null) MinimizeButton.IsVisible = ShowMinimizeButton;
+            if (ToggleMaximizeButton != null) ToggleMaximizeButton.IsVisible = ShowWindowChromeButtons;
+            if (CloseLauncherButton != null) CloseLauncherButton.IsVisible = ShowWindowChromeButtons;
         }
 
         private int _kioskUnlockBusy;

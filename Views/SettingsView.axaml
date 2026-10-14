@@ -457,6 +457,18 @@
 														   Margin="20,0,0,0"/>
 											</StackPanel>
 
+											<StackPanel Spacing="2" IsVisible="{Binding ShowOSTopBar}">
+											    <CheckBox x:Name="HideWindowControlsCheckBox"
+											              Content="Hide Quiver Window Controls"
+											              Foreground="{DynamicResource ThemeText}"
+											              FontSize="13" FontWeight="SemiBold"
+											              IsChecked="{Binding HideWindowControls, Mode=TwoWay}"/>
+											    <TextBlock Text="Use the OS top bar for minimize, maximize, and close"
+											               FontSize="11" TextWrapping="Wrap"
+											               Foreground="{DynamicResource ThemeTextSecondary}"
+											               Margin="20,0,0,0"/>
+											</StackPanel>
+
 											<StackPanel Spacing="4" Margin="0,8,0,0">
 												<TextBlock Text="Interface scale" FontSize="13" FontWeight="SemiBold"/>
 												<ComboBox x:Name="InterfaceScaleComboBox" MinWidth="120" FontSize="13"
