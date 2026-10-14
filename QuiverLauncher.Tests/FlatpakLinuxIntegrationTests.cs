@@ -49,7 +49,11 @@ public sealed class FlatpakLinuxIntegrationTests
                 return path;
             }
 
-            var first = await service.InstallAsync(await Bundle("v1"), "v1", gamePath, token: TestContext.Current.CancellationToken);
+            var firstBundle = await Bundle("v1");
+            var first = await service.InstallAsync(firstBundle, "v1", gamePath, token: TestContext.Current.CancellationToken);
+            // Flatpak itself refuses the build it already has ("already installed"); Quiver keeps it.
+            (await service.InstallAsync(firstBundle, "v1", gamePath, token: TestContext.Current.CancellationToken))
+                .Should().Be(first);
             dataPath = FlatpakService.DataDirectory(first);
             var launched = await runner.RunAsync(FlatpakService.LaunchArguments(first), TestContext.Current.CancellationToken);
             launched.ExitCode.Should().Be(0, launched.Error);

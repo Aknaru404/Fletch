@@ -15,6 +15,8 @@ public static class DownloadAssetPolicy
 {
     public static bool IsAuxiliary(string name) =>
         name.EndsWith(".json", StringComparison.OrdinalIgnoreCase) ||
+        // Electron's update feeds (latest-linux.yml), delta maps and AppImage zsync files describe a download.
+        Regex.IsMatch(name, @"\.(?:ya?ml|blockmap|zsync)\z", RegexOptions.IgnoreCase | RegexOptions.CultureInvariant) ||
         // Only trailing, separated archive labels: app names such as Resource or SourceGame remain valid.
         Regex.IsMatch(name, @"(?:^|[._\s-])(?:notices?|sources?|source[._\s-]code|src)\.(?:zip|7z|rar|tar(?:\.(?:gz|xz|bz2|zst))?|tgz|tbz2|txz)\z",
             RegexOptions.IgnoreCase | RegexOptions.CultureInvariant) ||

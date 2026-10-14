@@ -144,6 +144,13 @@ public sealed class FlatpakService
         return commit;
     }
 
+    /// <summary>Whether Flatpak has exactly this build installed; false also when it can't say.</summary>
+    private async Task<bool> HasCommitAsync(FlatpakReceipt receipt, CancellationToken token)
+    {
+        try { return await GetCommitAsync(receipt, token).ConfigureAwait(false) == receipt.Commit; }
+        catch (Exception ex) when (ex is InvalidOperationException or InvalidDataException) { return false; }
+    }
+
     public async Task<FlatpakReceipt> InstallAsync(string bundlePath, string releaseTag, string gamePath,
         IEnumerable<string>? otherGamePaths = null, CancellationToken token = default)
     {
@@ -172,7 +179,10 @@ public sealed class FlatpakService
         File.WriteAllText(ownerPath, Path.GetFullPath(gamePath));
         var result = await _runner.RunAsync(["install", "--user", "--bundle", "--or-update",
             "--noninteractive", "--assumeyes", Path.GetFullPath(bundlePath)], token).ConfigureAwait(false);
-        RequireSuccess(result);
+        // Flatpak refuses a bundle whose exact build is already installed ("… already installed"), as after the
+        // app's library entry was removed and added again. That build is the one asked for.
+        if (result.ExitCode != 0 && !await HasCommitAsync(receipt, token).ConfigureAwait(false))
+            RequireSuccess(result);
         if (await GetCommitAsync(receipt, token).ConfigureAwait(false) != receipt.Commit)
             throw new InvalidOperationException("Flatpak did not install the requested bundle commit. The saved recovery record has been kept.");
         _writeReceipt(Path.Combine(gamePath, ReceiptFileName), receipt);

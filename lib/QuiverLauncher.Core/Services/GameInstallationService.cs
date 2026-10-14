@@ -13,8 +13,8 @@ public static class GameInstallationService
     public const string IncompleteInstallFileName = "install-incomplete.txt";
 
     /// <summary>
-    /// True for single-file release binaries: .exe, .appimage, or extensionless (e.g. CrashBandicoot_Linux,
-    /// P.T.PC.Port.Setup-linux, Game.x86_64).
+    /// True for single-file release binaries: .exe, .appimage, a Linux .run setup or .elf program, or extensionless
+    /// (e.g. CrashBandicoot_Linux, P.T.PC.Port.Setup-linux, Game.x86_64).
     /// </summary>
     public static bool IsSingleFileExecutableAsset(string assetName)
     {
@@ -22,7 +22,9 @@ public static class GameInstallationService
             return false;
 
         if (assetName.EndsWith(".exe", StringComparison.OrdinalIgnoreCase) ||
-            assetName.EndsWith(".appimage", StringComparison.OrdinalIgnoreCase))
+            assetName.EndsWith(".appimage", StringComparison.OrdinalIgnoreCase) ||
+            assetName.EndsWith(".run", StringComparison.OrdinalIgnoreCase) ||
+            assetName.EndsWith(".elf", StringComparison.OrdinalIgnoreCase))
         {
             return true;
         }
@@ -75,15 +77,32 @@ public static class GameInstallationService
             return false;
 
         return assetName.EndsWith(".zip", StringComparison.OrdinalIgnoreCase) ||
-               assetName.EndsWith(".tar.gz", StringComparison.OrdinalIgnoreCase) ||
+               IsTarballAsset(assetName) ||
                assetName.EndsWith(".7z", StringComparison.OrdinalIgnoreCase) ||
                assetName.EndsWith(".rar", StringComparison.OrdinalIgnoreCase) ||
                assetName.EndsWith(".exe", StringComparison.OrdinalIgnoreCase) ||
                IsWindowsInstallerAsset(assetName) ||
                assetName.EndsWith(".appimage", StringComparison.OrdinalIgnoreCase) ||
+               assetName.EndsWith(".run", StringComparison.OrdinalIgnoreCase) ||
+               assetName.EndsWith(".elf", StringComparison.OrdinalIgnoreCase) ||
+               IsDebianPackageAsset(assetName) ||
                assetName.EndsWith(".apk", StringComparison.OrdinalIgnoreCase) || IsFlatpakAsset(assetName) ||
                IsDiskImageAsset(assetName);
     }
+
+    static readonly string[] TarballExtensions = [".tar", ".tar.gz", ".tgz", ".tar.xz", ".txz", ".tar.bz2", ".tbz2", ".tar.zst", ".tzst"];
+
+    /// <summary>A tar archive, plain or compressed with gzip, xz, bzip2 or zstd (e.g. Game-linux-x64.tar.xz).</summary>
+    public static bool IsTarballAsset(string? assetName) =>
+        !string.IsNullOrWhiteSpace(assetName) &&
+        TarballExtensions.Any(extension => assetName.EndsWith(extension, StringComparison.OrdinalIgnoreCase));
+
+    static bool IsGzipTarball(string name) =>
+        name.EndsWith(".tar.gz", StringComparison.OrdinalIgnoreCase) || name.EndsWith(".tgz", StringComparison.OrdinalIgnoreCase);
+
+    /// <summary>A Debian/Ubuntu package (e.g. gzdoom_4.14.2_amd64.deb).</summary>
+    public static bool IsDebianPackageAsset(string? assetName) =>
+        !string.IsNullOrWhiteSpace(assetName) && assetName.EndsWith(".deb", StringComparison.OrdinalIgnoreCase);
 
     public static bool IsDiskImageAsset(string? assetName) =>
         !string.IsNullOrWhiteSpace(assetName) && assetName.EndsWith(".dmg", StringComparison.OrdinalIgnoreCase);
@@ -323,15 +342,25 @@ public static class GameInstallationService
                     $"Disk image '{assetName}' can only be installed on macOS.");
             }
 
-            InstallFromDiskImage(downloadPath, gamePath);
+            await InstallFromDiskImageAsync(downloadPath, gamePath, options).ConfigureAwait(false);
         }
         else if (effectiveName.EndsWith(".zip", StringComparison.OrdinalIgnoreCase))
         {
-            await ExtractZipAsync(downloadPath, gamePath).ConfigureAwait(false);
+            await ExtractZipAsync(downloadPath, gamePath, options).ConfigureAwait(false);
         }
-        else if (effectiveName.EndsWith(".tar.gz", StringComparison.OrdinalIgnoreCase))
+        else if (IsTarballAsset(effectiveName))
         {
-            await ExtractTarGzAsync(downloadPath, gamePath).ConfigureAwait(false);
+            await ExtractTarballAsync(downloadPath, gamePath, effectiveName).ConfigureAwait(false);
+        }
+        else if (IsDebianPackageAsset(effectiveName))
+        {
+            if (!OperatingSystem.IsLinux() || OperatingSystem.IsAndroid())
+            {
+                throw new InvalidOperationException(
+                    $"Debian package '{assetName}' can only be installed on Linux.");
+            }
+
+            await InstallFromDebianPackageAsync(downloadPath, gamePath, options).ConfigureAwait(false);
         }
         else if (effectiveName.EndsWith(".7z", StringComparison.OrdinalIgnoreCase) ||
                  effectiveName.EndsWith(".rar", StringComparison.OrdinalIgnoreCase))
@@ -342,7 +371,7 @@ public static class GameInstallationService
         {
             throw new InvalidOperationException(
                 $"Unsupported release asset type: '{assetName}'. " +
-                "Expected .exe, .appimage, .zip, .tar.gz, .7z, .rar, .dmg, or an extensionless binary.");
+                "Expected .exe, .appimage, .zip, .tar.gz, .tar.xz, .7z, .rar, .dmg, .deb, .run, or an extensionless binary.");
         }
 
         try
@@ -612,7 +641,7 @@ public static class GameInstallationService
         TryDeleteDirectory(sourceDir);
     }
 
-    static async Task ExtractZipAsync(string downloadPath, string gamePath)
+    static async Task ExtractZipAsync(string downloadPath, string gamePath, GameInstallationOptions options)
     {
         var tempExtractPath = Path.Combine(Path.GetTempPath(), Guid.NewGuid().ToString());
         Directory.CreateDirectory(tempExtractPath);
@@ -646,7 +675,7 @@ public static class GameInstallationService
                 var diskImages = Directory.GetFiles(tempExtractPath, "*.dmg", SearchOption.AllDirectories);
                 if (diskImages.Length == 1)
                 {
-                    InstallFromDiskImage(diskImages[0], gamePath);
+                    await InstallFromDiskImageAsync(diskImages[0], gamePath, options).ConfigureAwait(false);
                     return;
                 }
             }
@@ -654,7 +683,7 @@ public static class GameInstallationService
             if (TryGetNestedTarGzPayload(tempExtractPath, out var tarGzFile) &&
                 !string.IsNullOrEmpty(tarGzFile))
             {
-                await ExtractTarGzAsync(tarGzFile, gamePath).ConfigureAwait(false);
+                await ExtractTarballAsync(tarGzFile, gamePath, tarGzFile).ConfigureAwait(false);
                 return;
             }
 
@@ -861,22 +890,41 @@ public static class GameInstallationService
     /// <summary>
     /// Mounts a macOS disk image read-only and hidden, copies its visible contents into
     /// <paramref name="gamePath"/>, then detaches it. Top-level symlinks (the usual
-    /// "Applications" drag target) and hidden volume files are skipped.
+    /// "Applications" drag target) and hidden volume files are skipped. An image with a license agreement is
+    /// opened only once the player accepts it (<see cref="GameInstallationOptions.AcceptLicenseAsync"/>).
     /// </summary>
-    static void InstallFromDiskImage(string diskImagePath, string gamePath)
+    static async Task InstallFromDiskImageAsync(string diskImagePath, string gamePath, GameInstallationOptions options)
     {
+        var fileName = Path.GetFileName(diskImagePath);
+        var license = DiskImageLicense.Read(diskImagePath);
+        if (license != null && (options.AcceptLicenseAsync is not { } accept ||
+            !await accept(fileName, license).ConfigureAwait(false)))
+            throw new LicenseDeclinedException(fileName);
+
         var mountPoint = Path.Combine(Path.GetTempPath(), Guid.NewGuid().ToString("N"));
         Directory.CreateDirectory(mountPoint);
+        string? licenseFreeCopy = null;
 
         try
         {
-            // stdin is closed, so images that require accepting a license agreement fail
-            // here instead of hanging on hdiutil's prompt.
-            var attach = RunHdiutil("attach", diskImagePath, "-nobrowse", "-readonly", "-noautoopen", "-mountpoint", mountPoint);
+            var image = diskImagePath;
+            if (license != null)
+            {
+                // hdiutil asks for the agreement in a terminal and cancels without one. The player accepted it above,
+                // and a converted copy of the image opens without asking.
+                licenseFreeCopy = Path.Combine(Path.GetTempPath(), Guid.NewGuid().ToString("N") + ".cdr");
+                var conversion = RunHdiutil("convert", diskImagePath, "-quiet", "-format", "UDTO", "-o", licenseFreeCopy);
+                if (conversion.ExitCode != 0)
+                    throw new InvalidOperationException($"Could not open disk image '{fileName}': {HdiutilProblem(conversion.Error)}");
+                image = licenseFreeCopy;
+            }
+
+            // stdin is closed, so an agreement this missed fails here instead of hanging on hdiutil's prompt.
+            var attach = RunHdiutil("attach", image, "-nobrowse", "-readonly", "-noautoopen", "-mountpoint", mountPoint);
             if (attach.ExitCode != 0)
             {
                 throw new InvalidOperationException(
-                    $"Could not open disk image '{Path.GetFileName(diskImagePath)}': {attach.Error.Trim()} " +
+                    $"Could not open disk image '{fileName}': {HdiutilProblem(attach.Error)} " +
                     "If it asks you to accept a license agreement, open it in Finder and copy the app into the app's folder manually.");
             }
 
@@ -911,8 +959,15 @@ public static class GameInstallationService
         finally
         {
             TryDeleteDirectory(mountPoint);
+            if (licenseFreeCopy != null)
+                File.Delete(licenseFreeCopy);
         }
     }
+
+    /// <summary>hdiutil's error without its notes that "hdiutil attach" is deprecated, which macOS 26 adds to every run.</summary>
+    internal static string HdiutilProblem(string error) =>
+        string.Join('\n', error.Split('\n', StringSplitOptions.TrimEntries | StringSplitOptions.RemoveEmptyEntries)
+            .Where(line => !line.StartsWith("hdiutil: WARNING:", StringComparison.Ordinal)));
 
     static (int ExitCode, string Error) RunHdiutil(params string[] arguments)
     {
@@ -939,7 +994,8 @@ public static class GameInstallationService
         return (process.ExitCode, error);
     }
 
-    static async Task ExtractTarGzAsync(string sourceFilePath, string destinationDirectoryPath)
+    /// <param name="archiveName">The archive's name, which says how it is compressed; the downloaded file's may not.</param>
+    static async Task ExtractTarballAsync(string sourceFilePath, string destinationDirectoryPath, string archiveName)
     {
         Directory.CreateDirectory(destinationDirectoryPath);
 
@@ -948,7 +1004,7 @@ public static class GameInstallationService
 
         try
         {
-            await ExtractTarGzToDirectoryAsync(sourceFilePath, tempExtractPath).ConfigureAwait(false);
+            await ExtractTarballToDirectoryAsync(sourceFilePath, tempExtractPath, archiveName).ConfigureAwait(false);
             var sourcePath = GetEffectiveExtractionSource(tempExtractPath);
             MoveDirectoryContents(sourcePath, destinationDirectoryPath);
         }
@@ -1072,13 +1128,17 @@ public static class GameInstallationService
         return true;
     }
 
-    static async Task ExtractTarGzToDirectoryAsync(string sourceFilePath, string destinationDirectoryPath)
+    static async Task ExtractTarballToDirectoryAsync(string sourceFilePath, string destinationDirectoryPath, string archiveName)
     {
         Directory.CreateDirectory(destinationDirectoryPath);
+        var gzip = IsGzipTarball(archiveName) || !IsTarballAsset(archiveName);
 
         if (RuntimeInformation.IsOSPlatform(OSPlatform.Windows))
         {
-            if (!await TryExtractTarGzWithSystemTarAsync(sourceFilePath, destinationDirectoryPath).ConfigureAwait(false))
+            // Windows' tar may lack xz or zstd support, so only gzip goes to it.
+            if (!gzip)
+                ExtractTarballManaged(sourceFilePath, destinationDirectoryPath);
+            else if (!await TryExtractTarballWithSystemTarAsync(sourceFilePath, destinationDirectoryPath, gzip).ConfigureAwait(false))
                 ExtractTarGzManaged(sourceFilePath, destinationDirectoryPath);
             return;
         }
@@ -1086,19 +1146,32 @@ public static class GameInstallationService
         if (RuntimeInformation.IsOSPlatform(OSPlatform.Linux) ||
             RuntimeInformation.IsOSPlatform(OSPlatform.OSX))
         {
-            if (!await TryExtractTarGzWithSystemTarAsync(sourceFilePath, destinationDirectoryPath).ConfigureAwait(false))
+            try
+            {
+                if (await TryExtractTarballWithSystemTarAsync(sourceFilePath, destinationDirectoryPath, gzip).ConfigureAwait(false))
+                    return;
+            }
+            catch (InvalidOperationException) when (!gzip)
+            {
+                // tar runs xz or zstd to decompress, and either may be missing.
+                TryDeleteDirectory(destinationDirectoryPath);
+            }
+
+            if (gzip)
                 throw new InvalidOperationException("Could not start tar extraction.");
+            ExtractTarballManaged(sourceFilePath, destinationDirectoryPath);
             return;
         }
 
-        throw new PlatformNotSupportedException("Unsupported operating system for tar.gz extraction");
+        throw new PlatformNotSupportedException("Unsupported operating system for tar extraction");
     }
 
     /// <summary>
-    /// Extracts a .tar.gz using the system <c>tar</c> tool.
+    /// Extracts a tarball using the system <c>tar</c> tool, which keeps its programs executable. Other than gzip,
+    /// tar recognizes the compression itself.
     /// Returns false only when tar could not be started (e.g. missing from PATH).
     /// </summary>
-    static async Task<bool> TryExtractTarGzWithSystemTarAsync(string sourceFilePath, string destinationDirectoryPath)
+    static async Task<bool> TryExtractTarballWithSystemTarAsync(string sourceFilePath, string destinationDirectoryPath, bool gzip)
     {
         Process? process;
         try
@@ -1106,12 +1179,13 @@ public static class GameInstallationService
             var startInfo = new ProcessStartInfo
             {
                 FileName = "tar",
-                Arguments = $"-xzf \"{sourceFilePath}\" -C \"{destinationDirectoryPath}\"",
                 UseShellExecute = false,
                 RedirectStandardOutput = true,
                 RedirectStandardError = true,
                 CreateNoWindow = true
             };
+            foreach (var argument in new[] { gzip ? "-xzf" : "-xf", sourceFilePath, "-C", destinationDirectoryPath })
+                startInfo.ArgumentList.Add(argument);
 
             process = Process.Start(startInfo);
         }
@@ -1125,16 +1199,122 @@ public static class GameInstallationService
 
         using (process)
         {
+            var errorTask = process.StandardError.ReadToEndAsync();
+            var outputTask = process.StandardOutput.ReadToEndAsync();
             await process.WaitForExitAsync().ConfigureAwait(false);
+            var errorOutput = await errorTask.ConfigureAwait(false);
+            await outputTask.ConfigureAwait(false);
 
             if (process.ExitCode != 0)
-            {
-                var errorOutput = await process.StandardError.ReadToEndAsync().ConfigureAwait(false);
                 throw new InvalidOperationException($"Tar extraction failed: {errorOutput}");
-            }
         }
 
         return true;
+    }
+
+    /// <summary>
+    /// Extracts a tarball of any compression SharpCompress reads (gzip, xz, bzip2, zstd). A tarball doesn't keep the
+    /// executable bit this way, so on Linux and macOS the programs in it are marked executable again.
+    /// </summary>
+    internal static void ExtractTarballManaged(string sourceFilePath, string destinationDirectoryPath)
+    {
+        Directory.CreateDirectory(destinationDirectoryPath);
+        using (var stream = File.OpenRead(sourceFilePath))
+        using (var reader = ReaderFactory.OpenReader(stream))
+        {
+            var extractOptions = new ExtractionOptions { Overwrite = true, ExtractFullPath = false };
+            while (reader.MoveToNextEntry())
+            {
+                if (reader.Entry.IsDirectory || reader.Entry.LinkTarget != null)
+                    continue;
+                if (!TryGetSafeArchiveDestination(destinationDirectoryPath, reader.Entry.Key, out var destination))
+                    continue;
+                reader.WriteEntryToFile(destination, extractOptions);
+            }
+        }
+
+        if (OperatingSystem.IsWindows())
+            return;
+        var platform = OperatingSystem.IsMacOS() ? OSPlatform.OSX : OSPlatform.Linux;
+        foreach (var file in Directory.EnumerateFiles(destinationDirectoryPath, "*", SearchOption.AllDirectories))
+            if (IsLikelyNativeExecutable(file, platform))
+                File.SetUnixFileMode(file, File.GetUnixFileMode(file) |
+                    UnixFileMode.UserExecute | UnixFileMode.GroupExecute | UnixFileMode.OtherExecute);
+    }
+
+    /// <summary>
+    /// Installs a Debian package's files without a package manager: its data archive is unpacked into the app's
+    /// folder. A package that keeps the app in one folder under /opt (GZDoom, Electron apps) installs that folder;
+    /// any other keeps its usr/ tree, so a program in usr/bin still finds its files in usr/share.
+    /// </summary>
+    static async Task InstallFromDebianPackageAsync(string packagePath, string gamePath, GameInstallationOptions options)
+    {
+        var tempPath = Path.Combine(Path.GetTempPath(), Guid.NewGuid().ToString("N"));
+        Directory.CreateDirectory(tempPath);
+
+        try
+        {
+            var dataArchive = ExtractDebianDataArchive(packagePath, tempPath);
+            var tree = Path.Combine(tempPath, "tree");
+            await ExtractTarballToDirectoryAsync(dataArchive, tree, Path.GetFileName(dataArchive)).ConfigureAwait(false);
+
+            var opt = Path.Combine(tree, "opt");
+            var appFolders = Directory.Exists(opt) ? Directory.GetDirectories(opt) : [];
+            var source = appFolders.Length == 1 &&
+                FindExecutableCandidates(appFolders[0], SearchOption.AllDirectories, options, out _).Count > 0
+                ? appFolders[0]
+                : tree;
+            MoveDirectoryContents(source, gamePath);
+        }
+        finally
+        {
+            TryDeleteDirectory(tempPath);
+        }
+    }
+
+    static readonly byte[] ArMagic = "!<arch>\n"u8.ToArray();
+
+    /// <summary>
+    /// Copies the data archive (data.tar.xz, data.tar.zst, …) out of a Debian package, which is an ar archive,
+    /// into <paramref name="destinationDirectory"/> and returns its path.
+    /// </summary>
+    internal static string ExtractDebianDataArchive(string packagePath, string destinationDirectory)
+    {
+        var packageName = Path.GetFileName(packagePath);
+        using var stream = File.OpenRead(packagePath);
+        var magic = new byte[ArMagic.Length];
+        if (stream.ReadAtLeast(magic, magic.Length, throwOnEndOfStream: false) != magic.Length || !magic.AsSpan().SequenceEqual(ArMagic))
+            throw new InvalidDataException($"'{packageName}' is not a Debian package.");
+
+        // Each member has a 60-byte header: name (16), dates and owner (32), size (10), "`\n" (2); data is padded to even.
+        var header = new byte[60];
+        while (stream.ReadAtLeast(header, header.Length, throwOnEndOfStream: false) == header.Length)
+        {
+            var name = Encoding.ASCII.GetString(header, 0, 16).Trim().TrimEnd('/');
+            if (!long.TryParse(Encoding.ASCII.GetString(header, 48, 10).Trim(), out var size) || size < 0 ||
+                header[58] != '`' || header[59] != '\n')
+                throw new InvalidDataException($"'{packageName}' is damaged.");
+
+            if (name.StartsWith("data.tar", StringComparison.Ordinal) && name.All(c => char.IsAsciiLetterOrDigit(c) || c == '.'))
+            {
+                var path = Path.Combine(destinationDirectory, name);
+                using var output = File.Create(path);
+                var buffer = new byte[81920];
+                for (var remaining = size; remaining > 0;)
+                {
+                    var read = stream.Read(buffer, 0, (int)Math.Min(buffer.Length, remaining));
+                    if (read == 0)
+                        throw new InvalidDataException($"'{packageName}' is incomplete.");
+                    output.Write(buffer, 0, read);
+                    remaining -= read;
+                }
+                return path;
+            }
+
+            stream.Seek(size + size % 2, SeekOrigin.Current);
+        }
+
+        throw new InvalidDataException($"'{packageName}' has no files to install.");
     }
 
     /// <summary>

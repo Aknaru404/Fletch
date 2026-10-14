@@ -22,4 +22,10 @@ public sealed class GameInstallationOptions
 
     /// <summary>The file Quiver last installed this app from, when it recorded one.</summary>
     public string? PreviousInstallFileName { get; init; }
+
+    /// <summary>
+    /// Shows the player the license agreement a download asks them to accept (the download's file name, the
+    /// agreement) and returns whether they accept it. Without it, such a download isn't installed.
+    /// </summary>
+    public Func<string, string, Task<bool>>? AcceptLicenseAsync { get; init; }
 }

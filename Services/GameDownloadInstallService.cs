@@ -387,6 +387,7 @@ public static class GameDownloadInstallService
                         {
                             game.DownloadProgress = 90 + (Math.Clamp(p, 0, 1) * 9);
                         }),
+                        AcceptLicenseAsync = (fileName, license) => dialogs.AcceptLicenseAsync(game.DisplayName, fileName, license),
                     };
 
                     await GameInstallationService.InstallOrUpdateGameAsync(
@@ -514,9 +515,18 @@ public static class GameDownloadInstallService
             }
 
         }
+        catch (LicenseDeclinedException)
+        {
+            // Asked before anything was copied: the app stays as it was.
+            Telemetry.Current.Track("app_install_cancelled", Usage(("stage", "license_declined")));
+            game.Status = triggerStatus;
+            game.DownloadProgress = 0;
+        }
         catch (UnauthorizedAccessException ex)
         {
             Failed("permission", ex);
+            // Which step and which folder: the message alone often names neither.
+            Telemetry.Current.CaptureException(ex, handled: true, "app_install");
             await dialogs.ShowErrorAsync(
                 $"Permission error installing {game.Name}: {ex.Message}\n\nPlease check folder permissions.",
                 "Permission Error");
