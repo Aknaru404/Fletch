@@ -1,13 +1,12 @@
-# Quiver Launcher 3.5.1-rc.3
+# Quiver Launcher 3.5.1
 
-This is a prerelease for testing before 3.5.1.
+## Android
 
-## New since rc.2
-
-- When a Windows or Mac release has both an x64 and an ARM64 download, Quiver installs the one made for your computer's processor. Before, x64 PCs and Intel Macs often got the ARM64 build, which won't start.
-- On a Steam Deck, pressing A or B no longer counts twice when Steam also types Enter or Escape for it, so checkboxes, dropdowns and text fields respond normally.
-- On short windows, like a Steam Deck screen, the App Catalog's search and filters scroll away with the cards.
-- The sidebar's support button now goes to Patreon instead of Ko-fi.
+- Quiver no longer crashes on start when the library uses compact grid cards.
+- App Catalog artwork and app page icons show again.
+- Installing from the list view works.
+- Closing Quiver no longer crashes.
+- The App Catalog's title, search and filters scroll away with the cards, so on a landscape handheld the cards get the whole screen. Scroll up or press Up from the first row to bring them back.
 
 ## Controllers
 
@@ -34,6 +33,14 @@ This is a prerelease for testing before 3.5.1.
 - Settings shows how many GitHub requests you have left this hour. When the limit is used up, Quiver skips GitHub checks instead of failing each one.
 - The updates page has a **Check again** button, and the updates button opens that page when updates are waiting.
 
+## More downloads install
+
+- `.tar.xz`, `.tar.bz2`, `.tar.zst` and `.tgz` archives extract like `.tar.gz`, and programs inside stay runnable.
+- On Linux, `.deb` packages install into the app's folder, and `.run` setups and `.elf` programs install as single programs.
+- On macOS, a disk image with a license agreement shows it and installs once you accept, instead of failing.
+- Reinstalling a Flatpak whose exact build is already installed no longer fails.
+- Update feed and patch files (`latest-linux.yml`, `.blockmap`, `.zsync`) are no longer offered as downloads.
+
 ## Linux
 
 - Programs with dots in their names install, like P.T.'s `P.T.PC.Port.Setup-linux` and files ending in `.x86_64`.
@@ -46,20 +53,13 @@ This is a prerelease for testing before 3.5.1.
 - The controller stays with a `.app` game until you quit it, instead of jumping back to Quiver.
 - Quiver's data can move to Application Support, with the same button as on Linux.
 
-## Android
-
-- The App Catalog's title, search and filters scroll away with the cards, so on a landscape handheld the cards get the whole screen. Scroll up or press Up from the first row to bring them back.
-- Quiver no longer crashes on start when the library uses compact grid cards.
-- App Catalog artwork and app page icons show again.
-- Installing from the list view works.
-- Closing Quiver no longer crashes.
-
 ## Other improvements and fixes
 
 - On short desktop windows, like a Steam Deck screen, the App Catalog's title, search and filters scroll away with the cards, and come back when the window is made taller.
 - The sidebar's support button opens Quiver's Patreon page instead of Ko-fi.
 - Switching away from Quiver and back keeps an app's page where you'd scrolled it, with the mouse, keyboard or a controller.
+- New **Hide Quiver Window Controls** option under **Show OS Top Bar** in **Settings → Appearance**, so the window doesn't show two sets of buttons. Quiver's buttons come back in fullscreen and Steam Deck Gaming Mode.
 - Sub-menus follow your theme instead of opening dark grey.
 - The **Release asset filter** accepts wildcards: `*` for any text and `?` for one character, like `*portable*x64*`. Plain text still matches anywhere in the file name.
 
-Thanks to sdelavega for the macOS shortcut and controller fixes, and to ShizCalev for the faster update checks, Codeberg support and token checks.
+Thanks to sdelavega for the macOS shortcut and controller fixes, to ShizCalev for the faster update checks, Codeberg support and token checks, and to Tmd11a for the option to hide the window controls.
