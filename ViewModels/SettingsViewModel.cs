@@ -351,6 +351,12 @@ public class SettingsViewModel : ObservableViewModel
         set => Change(Current.ShowOSTopBar, value, s => s.ShowOSTopBar = value, SettingsChange.Presentation);
     }
 
+    public bool HideWindowControls
+    {
+        get => Current.HideWindowControls;
+        set => Change(Current.HideWindowControls, value, s => s.HideWindowControls = value, SettingsChange.Presentation);
+    }
+
     public bool DesktopSidebarCollapsed
     {
         get => Current.DesktopSidebarCollapsed;
