@@ -114,6 +114,31 @@ public sealed class FlatpakTests : IDisposable
     }
 
     [Fact]
+    public async Task Reinstalling_a_build_flatpak_already_has_succeeds()
+    {
+        // As after the app's library entry was removed and added again: Flatpak kept the same build.
+        _runner.Commit = _bundles.Receipt.Commit;
+        _runner.InstallError = "Error: Failed to install bundle io.github.example.Game: io.github.example.Game already installed";
+
+        var receipt = await Service().InstallAsync("game.flatpak", "v1", GamePath);
+
+        FlatpakService.ReadReceipt(GamePath).Should().Be(receipt);
+        File.Exists(Path.Combine(GamePath, FlatpakService.PendingFileName)).Should().BeFalse();
+        (await Service().GetStateAsync(GamePath))!.Version.Should().Be("v1");
+    }
+
+    [Fact]
+    public async Task A_failed_install_with_another_build_installed_still_fails()
+    {
+        _runner.Commit = new string('c', 64);
+        _runner.InstallError = "Runtime not found";
+
+        var ex = await Assert.ThrowsAsync<InvalidOperationException>(() => Service().InstallAsync("game.flatpak", "v1", GamePath));
+
+        ex.Message.Should().Contain("Runtime not found");
+    }
+
+    [Fact]
     public async Task Failed_first_install_never_counts_metadata_as_installed()
     {
         _runner.InstallError = "Runtime not found";
