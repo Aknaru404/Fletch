@@ -1,5 +1,5 @@
 {
-  "id": "2026-10-09-350",
+  "id": "2026-10-15-351",
   "enabled": true,
-  "message": "3.5.0: The new App Catalog, powered by QuiverLauncher.com. Player feedback on every port, game pages, AI labels and a catalog built to grow. Updates now go to verified releases only, with every download checked. Plus Mac builds and kiosk mode."
+  "message": "Update 3.5.1: Fixed Android crash and issue with catalog images. More controller support with SDL3. Smarter automatic download picking, and Quiver can now install .tar.xz files."
 }

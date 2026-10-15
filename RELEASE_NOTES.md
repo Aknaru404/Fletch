@@ -1,58 +1,65 @@
-# Quiver Launcher 3.5.0
+# Quiver Launcher 3.5.1
 
-## New App Catalog, powered by QuiverLauncher.com
+## Android
 
-- The App Catalog now comes from [quiverlauncher.com](https://quiverlauncher.com) and is laid out like the website. Search, sort and filter by project type, platform, console and AI use.
-- Cards show how each app runs from player feedback (**Runs well**, **Has issues**, **Doesn't run**), the game it's based on, its platforms and when it was last updated.
-- Searching shows the games that match. Each game has a page with every way to play it, best first.
-- Each app has a page with its README, its releases and player feedback. To leave feedback, use the button that opens the website.
-- Add an app straight from its card with **+ Add**, or press **Y** on a controller. Apps already in your library say **Open in Library**.
-- Apps already in your library are hidden so new ones are easier to find. Untick **Hide apps in my library** to see them.
-- The catalog fits any window size, and on Android it looks like the website on a phone.
-- App lists are gone. If you keep your own list, add it in **Settings → Advanced → My app list** (a JSON file or a URL).
+- Quiver no longer crashes on start when the library uses compact grid cards.
+- App Catalog artwork and app page icons show again.
+- Installing from the list view works.
+- Closing Quiver no longer crashes.
+- The App Catalog's title, search and filters scroll away with the cards, so on a landscape handheld the cards get the whole screen. Scroll up or press Up from the first row to bring them back.
+
+## Controllers
+
+- Controller input now uses SDL3 on Windows, Linux and macOS. Linux ARM64 gets controller support for the first time, and Linux x64 and Intel Macs move to a much newer SDL, so more recent gamepads are recognised.
+- Your saved buttons stay as they were, including the A/B layout on Nintendo pads. On Steam Deck, the controller and lizard mode work as before.
+- On a Steam Deck, a button press counts once even when Steam also types its key, so A no longer toggles a checkbox straight back or opens and closes a dropdown.
 
 ## Safer installs and updates
 
-- Updates go to the release quiverlauncher.com has verified, not just the newest one.
-- Downloads are checked against the file the site recorded, and refused if it changed.
-- Installing a release that isn't verified asks first. A blocked release asks twice. Automatic updates never install either.
-- Library cards show when a newer release is out but not verified yet. **Versions → Install vX (not verified)** installs it if you want it.
-- **Versions** has **Change Version**, **Reinstall** to fix a broken install, and **Back to verified updates** when you've picked a version or skipped an update.
-- Catalog apps get their releases from quiverlauncher.com, so adding, installing and updating no longer hit GitHub's request limit.
+- If several antivirus engines flag the file Quiver is about to download, Quiver asks first and says your antivirus may block the download or remove the app's files. Automatic updates leave these for you to install yourself.
+- The app page says what **Verified** means: the release comes from the app's usual developer, its files haven't been swapped, and it waited 48 hours with its files scanned by VirusTotal.
+- When a developer removes or replaces a release file, Quiver says so and offers the newest other verified release.
+- Rolling releases, like nightly builds, are offered as an update when they're rebuilt under the same tag, and install again when the file matches the one GitHub publishes.
+- When a release has several downloads, Update installs the one that matches the build you have, with only the version changed. If no single file matches, you still pick, and the matching file is listed first as "(Same build as installed)". Apps installed before this version ask once more on their next update.
+- When a Windows or Mac release has both x64 and ARM64 downloads, Quiver installs the one for your computer's processor. ARM64 computers still get the x64 build when there is no ARM64 one.
+- When Windows Security blocks a file or a file is locked, Quiver explains it whatever language Windows is in.
+- For an app in a folder you chose, an AppImage update replaces only the file Quiver installed, and deleting the app moves only that file to the Trash. Before, other AppImages in that folder could be removed.
 
-## Library
+## Update checks and tokens
 
-- Apps in your library pick up the catalog's current name, icon and tags. Your own names, covers and tags stay.
-- **View README** and **Show Changelog** open the app's page on its Overview and Releases tabs.
-- New name style, **Project + name below**, to match the App Catalog cards.
-- Removing an app that isn't installed no longer asks first.
+- Update checks run up to 8 apps at a time for each site, so a large library is checked in seconds rather than minutes. Apps late in the queue no longer report a timeout before they were checked.
+- Apps hosted on codeberg.org can be added, with an optional Codeberg token in **Settings → Advanced**.
+- Tokens are checked with GitHub, GitLab or Codeberg when you save them. If one is rejected during an update check, Quiver tells you to replace it.
+- Settings shows how many GitHub requests you have left this hour. When the limit is used up, Quiver skips GitHub checks instead of failing each one.
+- The updates page has a **Check again** button, and the updates button opens that page when updates are waiting.
 
-## Kiosk mode
+## More downloads install
 
-- New in **Settings → General**: Quiver starts fullscreen with only browsing and launching, for arcade cabinets and shared PCs.
-- Press **Ctrl+Alt+K** to unlock it, and again to lock it. You can set a PIN for unlocking.
+- `.tar.xz`, `.tar.bz2`, `.tar.zst` and `.tgz` archives extract like `.tar.gz`, and programs inside stay runnable.
+- On Linux, `.deb` packages install into the app's folder, and `.run` setups and `.elf` programs install as single programs.
+- On macOS, a disk image with a license agreement shows it and installs once you accept, instead of failing.
+- Reinstalling a Flatpak whose exact build is already installed no longer fails.
+- Update feed and patch files (`latest-linux.yml`, `.blockmap`, `.zsync`) are no longer offered as downloads.
 
-## Anonymous usage data
+## Linux
 
-- Quiver asks once whether it may send anonymous usage data: which features get used, which apps are installed and launched, and errors. It's off unless you say yes.
-- It never includes your name, files or folders. Change it any time in **Settings → General → Usage data**.
+- Programs with dots in their names install, like P.T.'s `P.T.PC.Port.Setup-linux` and files ending in `.x86_64`.
+- Flatpak bundles that come inside a zip are offered, and install like any other Flatpak.
+- The AppImage uses Quiver's data in `~/.local/share/QuiverLauncher` when it's already there. **Settings → General → Quiver data folder** has a button that moves it there. Installed apps stay where they are.
 
-## More platforms
+## macOS
 
-- macOS downloads for Apple Silicon and Intel Macs. The app isn't notarized yet, so macOS asks you to confirm the first time you open it. If it says the app can't be opened, go to **System Settings → Privacy & Security** and choose **Open Anyway**.
-- A Linux x64 Flatpak (experimental). It doesn't update itself, so install a newer bundle to update it.
-- Apps that release a `.msi` on Windows install through the setup wizard, then you pick the program it installed. Updates for these apps always ask first.
+- **Create Desktop Shortcut** works, and picking a `.app` from several programs no longer fails.
+- The controller stays with a `.app` game until you quit it, instead of jumping back to Quiver.
+- Quiver's data can move to Application Support, with the same button as on Linux.
 
 ## Other improvements and fixes
 
-- A **QuiverLauncher.com** button at the bottom of the sidebar.
-- Quiver uses less memory, especially with a big library.
-- If a Quiver update can't be installed, Quiver says why instead of offering the same update again.
-- Quiver installed at the top of a drive (like G:) no longer loses its library when it updates.
-- If quiverlauncher.com can't be reached securely, the App Catalog tries another address.
-- The Mods screen loads mods the first time it opens.
-- The window no longer jumps while you move or resize it.
-- Release tags like `Version1.0.4` are no longer mixed up with other versions.
-- Fixes for text contrast in the light theme.
+- On short desktop windows, like a Steam Deck screen, the App Catalog's title, search and filters scroll away with the cards, and come back when the window is made taller.
+- The sidebar's support button opens Quiver's Patreon page instead of Ko-fi.
+- Switching away from Quiver and back keeps an app's page where you'd scrolled it, with the mouse, keyboard or a controller.
+- New **Hide Quiver Window Controls** option under **Show OS Top Bar** in **Settings → Appearance**, so the window doesn't show two sets of buttons. Quiver's buttons come back in fullscreen and Steam Deck Gaming Mode.
+- Sub-menus follow your theme instead of opening dark grey.
+- The **Release asset filter** accepts wildcards: `*` for any text and `?` for one character, like `*portable*x64*`. Plain text still matches anywhere in the file name.
 
-Thanks to sdelavega, jeffsmith82 and MarllonMenezes for their fixes.
+Thanks to sdelavega for the macOS shortcut and controller fixes, to ShizCalev for the faster update checks, Codeberg support and token checks, and to Tmd11a for the option to hide the window controls.
