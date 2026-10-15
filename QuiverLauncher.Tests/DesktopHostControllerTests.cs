@@ -52,4 +52,48 @@ public class DesktopHostControllerTests
         }
         finally { window.Close(); await view.ShutdownAsync(); }
     }
+
+    [AvaloniaFact]
+    public async Task Hiding_window_controls_follows_the_OS_top_bar_and_keeps_them_in_fullscreen()
+    {
+        var store = new Store(true);
+        var view = new MainView(new() { SettingsStore = store, InitializeOnOpen = false, EnableInput = false, EnableMusic = false });
+        var window = new Window { Content = view, Width = 1200, Height = 720 };
+        using var controller = new DesktopHostController(window, view);
+        var settings = view.FindControl<SettingsView>("SettingsPanel")!;
+        void AssertControls(bool visible)
+        {
+            foreach (var name in new[] { "MinimizeButton", "ToggleMaximizeButton", "CloseLauncherButton" })
+                view.FindControl<Button>(name)!.IsVisible.Should().Be(visible, name);
+            view.FindControl<StackPanel>("HeaderFixedActions")!.Margin.Right.Should().Be(visible ? 0 : 16);
+        }
+        try
+        {
+            window.Show();
+            Dispatcher.UIThread.RunJobs();
+            AssertControls(true);
+
+            settings.FindControl<CheckBox>("HideWindowControlsCheckBox")!.IsChecked = true;
+            Dispatcher.UIThread.RunJobs();
+            store.Current.HideWindowControls.Should().BeTrue();
+            AssertControls(false);
+
+            window.WindowState = WindowState.FullScreen;
+            Dispatcher.UIThread.RunJobs();
+            AssertControls(true);
+            window.WindowState = WindowState.Normal;
+            Dispatcher.UIThread.RunJobs();
+            AssertControls(false);
+
+            var topBar = settings.FindControl<CheckBox>("ShowOSTopBarCheckBox")!;
+            topBar.IsChecked = false;
+            Dispatcher.UIThread.RunJobs();
+            ((Control)settings.FindControl<CheckBox>("HideWindowControlsCheckBox")!.Parent!).IsVisible.Should().BeFalse();
+            AssertControls(true);
+            topBar.IsChecked = true;
+            Dispatcher.UIThread.RunJobs();
+            AssertControls(false);
+        }
+        finally { window.Close(); await view.ShutdownAsync(); }
+    }
 }

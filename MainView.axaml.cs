@@ -79,11 +79,13 @@ namespace QuiverLauncher
         public bool ShowCatalogNavigation => !KioskLocked;
         public bool ShowExternalLinks => !KioskLocked;
         public bool ShowUpdateCheckButton => !KioskLocked;
-        public bool ShowWindowChromeButtons => IsDesktopPlatform && !KioskLocked
-            && !(_settings.ShowOSTopBar && _settings.HideWindowControls);
+        public bool ShowWindowChromeButtons => IsDesktopPlatform && !KioskLocked && !OSTopBarReplacesWindowControls;
         public bool ShowMinimizeButton => ShowWindowChromeButtons && !SteamDeckEnvironment.IsGamingMode();
         public string MaximizeButtonTip => GetHostWindowState()is WindowState.Maximized or WindowState.FullScreen ? "Restore" : "Maximize";
         public bool IsMobile => PlatformCapabilities.IsMobile;
+        // Fullscreen and Steam Deck Gaming Mode have no OS title bar, so Quiver's own controls stay.
+        private bool OSTopBarReplacesWindowControls => _settings.ShowOSTopBar && _settings.HideWindowControls
+            && GetHostWindowState() != WindowState.FullScreen && !SteamDeckEnvironment.IsGamingMode();
 
         private readonly LauncherInputController _input;
         private InputService? _inputService => _input?.Service;
@@ -95,7 +97,11 @@ namespace QuiverLauncher
         internal Window? HostWindow => _desktopHost?.Window;
 
         internal void AttachDesktopHost(DesktopHostController host) => _desktopHost = host;
-        internal void NotifyHostWindowStateChanged() => OnPropertyChanged(nameof(MaximizeButtonTip));
+        internal void NotifyHostWindowStateChanged()
+        {
+            OnPropertyChanged(nameof(MaximizeButtonTip));
+            ApplyWindowControlsVisibility();
+        }
         internal void DismissInputForHost() => DismissTextInputFocus();
         internal void RefreshHostUpdateStatus() => _updates.RefreshUpdateCheckStatus();
         internal void PrepareForHostClose()
@@ -668,8 +674,6 @@ namespace QuiverLauncher
             if (CheckForUpdatesButton != null) CheckForUpdatesButton.IsVisible = ShowUpdateCheckButton;
             if (BrowseNavButton != null) BrowseNavButton.IsVisible = ShowCatalogNavigation;
             if (ExternalLinksHost != null) ExternalLinksHost.IsVisible = ShowExternalLinks;
-            if (HeaderFixedActions != null)
-                HeaderFixedActions.Margin = new Thickness(0, 0, KioskLocked ? 16 : 0, 0);
             if (!refreshShell && KioskLocked)
                 _sidebarController?.CollapseForKioskStartup();
             if (!KioskLocked)
@@ -686,6 +690,8 @@ namespace QuiverLauncher
             if (MinimizeButton != null) MinimizeButton.IsVisible = ShowMinimizeButton;
             if (ToggleMaximizeButton != null) ToggleMaximizeButton.IsVisible = ShowWindowChromeButtons;
             if (CloseLauncherButton != null) CloseLauncherButton.IsVisible = ShowWindowChromeButtons;
+            if (HeaderFixedActions != null)
+                HeaderFixedActions.Margin = new Thickness(0, 0, KioskLocked || OSTopBarReplacesWindowControls ? 16 : 0, 0);
         }
 
         private int _kioskUnlockBusy;
