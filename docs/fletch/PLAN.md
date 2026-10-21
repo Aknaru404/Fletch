@@ -113,3 +113,20 @@ None. Q1 to Q4 decided on 2026-10-21 as D8 to D11.
 |---|---|---|
 | X1 | One-tap JIT for apps that need it (emulators): Fletch "Launch with JIT" hands the bundle ID to StikDebug via its URL scheme | JIT cannot be enabled permanently on iOS: a debugger must attach on each launch. Needs StikDebug installed, a one-time pairing file made on a computer, and a `get-task-allow` signature from Signulous. Not needed for natively compiled engines. Recorded 2026-10-21 at the owner's request; no decision. |
 | X2 | Per-game iOS builds of open-source engines (for example dhewm3, OpenJK, Arx Libertatis, OpenMW) as separate apps, rendered through Metal (ANGLE or MoltenVK), tracked and delivered through Fletch | Each game becomes its own IPA. The owner supplies legitimately owned game data through Files. Console static recompilations are research only. Device limits: about 4 GB RAM and little free storage. Recorded 2026-10-21; no decision. |
+
+### X2 estimates (owner's game list, 2026-10-21; ideas only)
+
+Assumptions: iPad Pro 11-inch (2018, A12X, 4 GB RAM), owner-supplied game data, GitHub Actions macOS minutes free. Cost is Claude usage, scaled from this programme's M0 and M1 (about $10 to $15 metered).
+
+| Title | Route | Expected performance | Time to tested IPA | Cost (tokens / money) |
+|---|---|---|---|---|
+| Diablo + Hellfire | DevilutionX (already targets iOS) | Excellent, 60 fps | 0.5 to 1 day | ~3–8M / $5–15 |
+| Fallout 1, Fallout 2 | fallout1-ce, fallout2-ce (already target iOS) | Excellent, 60 fps | 0.5 to 1 day each | ~3–8M / $5–15 each |
+| Baldur's Gate 1/2, Icewind Dale, Planescape: Torment | GemRB (iOS support), or buy official Enhanced Editions | Excellent | 1 to 2 days (0 if bought) | ~8–20M / $10–30 |
+| TES II: Daggerfall | Daggerfall Unity (Unity Editor in CI) | Good, 60 fps | 1 to 2 weeks | ~30–80M / $40–120 |
+| TES III: Morrowind | OpenMW (OSG, Bullet, MyGUI, FFmpeg, Lua without JIT) | Good, 30 to 60 fps, reduced view distance | 1 to 3 weeks | ~40–120M / $60–200 |
+| Arx Fatalis | Arx Libertatis via ANGLE to Metal | Good, 60 fps | 3 to 7 days | ~20–50M / $30–80 |
+| KOTOR 1/2 | Official iOS apps (open engine incomplete) | Excellent | none | $0 |
+| Fallout 3/NV/4, Oblivion, Skyrim, Diablo II/III, Assassin's Creed, God of War (PS2), Guild Wars 1/2, Xbox 360 RPGs | Not possible: closed engines with no open reimplementation, online-only, or no recompilation; 360 titles exceed 4 GB RAM | n/a | n/a | n/a |
+
+Constraints: about 4.2 GB free storage on the device; Morrowind data with expansions is about 1.2 GB.
