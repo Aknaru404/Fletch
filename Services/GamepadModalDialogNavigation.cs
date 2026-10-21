@@ -670,7 +670,7 @@ public sealed class GamepadModalDialogNavigation
         "uninstall",
         "download anyway",
         "open settings",
-        "update quiver launcher",
+        "update fletch",
         "update apps",
         "save",
         "save & download",

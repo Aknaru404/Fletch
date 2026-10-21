@@ -271,9 +271,9 @@ public sealed class LibraryActions
     private async Task RemoveFromLocatedFolderAsync(GameInfo game)
     {
         var folder = game.InstallPath!;
-        if (!await ShowMessageBoxAsync($"Delete {game.Name}?\n\nYou chose its folder, {folder}, so Quiver Launcher leaves the folder " +
-            "and your other files in it alone. Only the file Quiver Launcher downloaded there, if any, moves to the Recycle Bin / Trash, " +
-            "and Quiver Launcher stops using the folder.", "Confirm Deletion", isQuestion: true, preferCancelDefault: true) || _session.IsClosed)
+        if (!await ShowMessageBoxAsync($"Delete {game.Name}?\n\nYou chose its folder, {folder}, so {QuiverLauncherProfile.Instance.DisplayName} leaves the folder " +
+            "and your other files in it alone. Only the file Fletch downloaded there, if any, moves to the Recycle Bin / Trash, " +
+            "and Fletch stops using the folder.", "Confirm Deletion", isQuestion: true, preferCancelDefault: true) || _session.IsClosed)
             return;
 
         game.IsLoading = true;

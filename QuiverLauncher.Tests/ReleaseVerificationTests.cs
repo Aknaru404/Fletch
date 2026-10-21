@@ -351,7 +351,7 @@ public class ReleaseVerificationTests
         dialogs.Confirmations.Should().BeEmpty("the release itself is verified");
         var error = dialogs.Errors.Should().ContainSingle().Subject;
         error.Title.Should().Be("Download Not Verified");
-        error.Message.Should().Contain($"{Asset} isn't the file Quiver checked");
+        error.Message.Should().Contain($"{Asset} isn't the file the catalog checked");
         // The site is told, so it reads v2 back from GitHub now instead of at its daily check.
         launcher.Network.Reports.Should().Equal(("alpha", "v2", Asset, "mismatch"));
         app.InstalledVersion.Should().Be("v1");
@@ -543,10 +543,10 @@ public class ReleaseVerificationTests
         asked.Should().HaveCount(questions);
         asked[0].Title.Should().Be("Blocked release");
         asked[0].Message.Should().Be(
-            "Quiver blocked Alpha v0.9, so it shouldn't be installed.\n\n• The developer pulled this release.\n\n" +
+            "The catalog blocked Alpha v0.9, so it shouldn't be installed.\n\n• The developer pulled this release.\n\n" +
             "The verified version is v1.0.\n\nInstall it anyway?");
         if (questions == 2)
-            asked[1].Should().Be(("Are you sure? Quiver blocked Alpha v0.9.", "Install a blocked release?"));
+            asked[1].Should().Be(("Are you sure? The catalog blocked Alpha v0.9.", "Install a blocked release?"));
     }
 
     [Fact]
@@ -571,13 +571,13 @@ public class ReleaseVerificationTests
         var (message, title) = asked.Should().ContainSingle().Subject;
         title.Should().Be("Not verified yet");
         message.Should().Be(
-            $"Quiver hasn't verified Alpha v1.1 yet.\n\n• {CatalogReleases.NotSeen}\n\n" +
+            $"The catalog hasn't verified Alpha v1.1 yet.\n\n• {CatalogReleases.NotSeen}\n\n" +
             "It should be verified in about 3 hours.\nThe verified version is v1.0.\n\nInstall it anyway?");
 
         // With nothing verified yet there is no release to point at; a detection is worth a line.
         var flagged = unseen with { VerifiedVersion = null, VerifiedAt = null, ScanVerdict = "flagged", ScanEngines = "3 engines" };
         (await Confirm("v1.1", flagged)).Asked.Single().Message.Should().Be(
-            $"Quiver hasn't verified Alpha v1.1 yet.\n\n• {CatalogReleases.NotSeen}\n• VirusTotal: 3 engines flag one of its files. " +
+            $"The catalog hasn't verified Alpha v1.1 yet.\n\n• {CatalogReleases.NotSeen}\n• VirusTotal: 3 engines flag one of its files. " +
             "Your antivirus may block or remove it.\n\n" +
             "No version of this app is verified yet.\n\nInstall it anyway?");
     }
@@ -680,8 +680,8 @@ public class ReleaseVerificationTests
 
         result.Should().BeFalse();
         asked.Should().ContainSingle().Which.Should().Be((
-            $"5 of 70 engines on VirusTotal flag {Asset}, the file Quiver downloads for Alpha v2.\n\n" +
-            "Quiver checked that this is the developer's own release, and game ports like this are often flagged by mistake. " +
+            $"5 of 70 engines on VirusTotal flag {Asset}, the file Fletch downloads for Alpha v2.\n\n" +
+            "The catalog checked that this is the developer's own release, and game ports like this are often flagged by mistake. " +
             "Even so, your antivirus may block the download or remove files once it's installed, which would stop the app from working.\n\n" +
             "Install anyway?",
             "Your antivirus may block this"));

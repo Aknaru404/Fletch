@@ -58,8 +58,8 @@ namespace QuiverLauncher.Services
             }
             catch (Exception ex) when (ex is JsonException or InvalidOperationException or FormatException)
             {
-                throw new JsonException($"Quiver could not read the complete library. No library data has been overwritten. " +
-                    $"Close Quiver and check {_appsConfigPath} (or games.json during migration). " +
+                throw new JsonException($"{QuiverLauncherProfile.Instance.DisplayName} could not read the complete library. No library data has been overwritten. " +
+                    $"Close {QuiverLauncherProfile.Instance.DisplayName} and check {_appsConfigPath} (or games.json during migration). " +
                     $"Saved backups, if available, are in {LibraryBackupDirectory}. {ex.Message}", ex);
             }
         }

@@ -11,10 +11,10 @@ public static class ManualAppFolderService
     public const string InstructionFileName = "Place app files here.txt";
 
     public static readonly string InstructionContents =
-        "Most apps in Quiver Launcher come from GitHub or GitLab Releases, so Quiver Launcher can download them and keep them up to date. This app is not on GitHub or GitLab Releases, so Quiver Launcher cannot download or update it." +
+        "Most apps in Fletch come from GitHub or GitLab Releases, so Fletch can download them and keep them up to date. This app is not on GitHub or GitLab Releases, so Fletch cannot download or update it." +
         Environment.NewLine +
         Environment.NewLine +
-        "Download the app yourself and put its files in this folder. Quiver Launcher will detect an executable and let you launch it. You will need to keep it up to date yourself." +
+        "Download the app yourself and put its files in this folder. Fletch will detect an executable and let you launch it. You will need to keep it up to date yourself." +
         Environment.NewLine +
         Environment.NewLine +
         "If a GitHub or GitLab release becomes available and this app has a repository set, this entry will gain version checks and updates.";

@@ -839,7 +839,7 @@ public class GamepadModalDialogNavigationTests
     public void Attach_stacks_dialogs_and_unregister_restores_previous()
     {
         var dialogA = new Window { Content = new Button { Content = "Yes" } };
-        var dialogB = new Window { Content = new Button { Content = "Update Quiver Launcher" } };
+        var dialogB = new Window { Content = new Button { Content = "Update Fletch" } };
         var nav = GamepadModalDialogNavigation.Instance;
 
         try
@@ -883,7 +883,7 @@ public class GamepadModalDialogNavigationTests
             {
                 Children =
                 {
-                    new Button { Content = "Update Quiver Launcher" },
+                    new Button { Content = "Update Fletch" },
                     new Button { Content = "Not now" },
                 },
             },
@@ -1000,7 +1000,7 @@ public class GamepadModalDialogNavigationTests
         GamepadModalDialogNavigation.ApplyDialogResultHint(dialog, new Button { Content = "No" });
         dialog.Tag.Should().Be(false);
 
-        GamepadModalDialogNavigation.ApplyDialogResultHint(dialog, new Button { Content = "Update Quiver Launcher" });
+        GamepadModalDialogNavigation.ApplyDialogResultHint(dialog, new Button { Content = "Update Fletch" });
         dialog.Tag.Should().Be(true);
 
         GamepadModalDialogNavigation.ApplyDialogResultHint(dialog, new Button { Content = "Not now" });

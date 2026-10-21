@@ -51,7 +51,7 @@ public sealed record ReleaseCheck(
 /// </summary>
 public sealed class CatalogReleases
 {
-    internal const string NotSeen = "Quiver hasn't seen this release yet.";
+    internal const string NotSeen = "The catalog hasn't seen this release yet.";
     internal const string Unreachable = "Couldn't reach the app catalog to check this release.";
     private static readonly TimeSpan StatusAge = TimeSpan.FromMinutes(30);
     private static readonly TimeSpan HistoryAge = TimeSpan.FromMinutes(10);

@@ -292,7 +292,7 @@ public partial class BrowseDetailsView : UserControl, IFeatureNavigationHandler
         BrowseDetailsReleasesStatus.IsVisible = Model.ReleasesStatus.Length > 0;
         if (!ReferenceEquals(_shownReleases, Model.Releases)) ShowReleases(Model.Releases);
         BrowseDetailsShareTitle.Text = said == 0 ? "Nobody has shared how it runs yet" : "Your experience helps the next person";
-        BrowseDetailsReviewButton.IsVisible = Model.ReviewUrl != null;
+        BrowseDetailsReviewButton.IsVisible = BrowseDetailsShareNote.IsVisible = Model.ReviewUrl != null;
         BrowseDetailsReviews.ItemsSource = Model.Reviews;
         BrowseDetailsReviewsStatus.Text = Model.ReviewsStatus;
         BrowseDetailsReviewsStatus.IsVisible = Model.ReviewsStatus.Length > 0;

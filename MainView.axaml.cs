@@ -77,8 +77,8 @@ namespace QuiverLauncher
         public bool KioskLocked => _settingsViewModel.KioskLocked;
         public bool ShowSettingsButton => !KioskLocked;
         public bool ShowCatalogNavigation => PlatformCapabilities.HasAppCatalog && !KioskLocked;
-        /// <summary>The upstream website, Discord and Patreon buttons; off with the catalog (PLAN D12).</summary>
-        public bool ShowUpstreamLinks => PlatformCapabilities.HasAppCatalog;
+        /// <summary>The upstream website, Discord and Patreon buttons; off in Fletch (PLAN D12).</summary>
+        public bool ShowUpstreamLinks => PlatformCapabilities.HasUpstreamCommunityLinks;
         public bool ShowExternalLinks => !KioskLocked;
         public bool ShowUpdateCheckButton => !KioskLocked;
         public bool ShowWindowChromeButtons => IsDesktopPlatform && !KioskLocked && !OSTopBarReplacesWindowControls;
@@ -1632,7 +1632,7 @@ namespace QuiverLauncher
 
         private void WebsiteButton_Click(object sender, RoutedEventArgs e)
         {
-            if (KioskLocked || QuiverCatalogClient.WebsiteUrl is not { } website)
+            if (KioskLocked || !ShowUpstreamLinks || QuiverCatalogClient.WebsiteUrl is not { } website)
                 return;
             try
             {

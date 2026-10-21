@@ -126,22 +126,22 @@ public sealed class LauncherUpdateWorkflow : IUpdateCheckWorkflow
         _settingsModel.SetUsageData(yes, "prompt");
     }
 
-    public const string UsageDataTitle = "Help improve Quiver Launcher";
+    public const string UsageDataTitle = "Help improve Fletch";
     public const string UsageDataQuestion =
         """
-        Send anonymous usage data to help make Quiver Launcher better?
+        Send anonymous usage data to help make Fletch better?
 
         This shares which features get used, which apps are installed and launched, and any errors, so problems can be found and fixed. It never includes your name, files or folders.
 
         You can change this at any time in Settings → General → Usage data.
         """;
 
-    public const string FirstRunWelcomeTitle = "Welcome to Quiver Launcher";
+    public const string FirstRunWelcomeTitle = "Welcome to Fletch";
     public const string FirstRunWelcomeMessage =
         """
         Discover community apps and manage downloads and updates in one place.
 
-        Browse the Quiver catalog, choose what you'd like to add, then download it from your library.
+        Browse the catalog, choose what you'd like to add, then download it from your library.
 
         You'll need an internet connection to browse the catalog and download apps.
         """;

@@ -309,7 +309,7 @@ public partial class App
             bool accepted = await ShowMessageBoxWithChoiceAsync(
                 message,
                 "Update Available",
-                confirmText: "Update Quiver Launcher",
+                confirmText: "Update Fletch",
                 dismissText: "Not now");
 
             if (!accepted)
@@ -353,7 +353,7 @@ public partial class App
         catch (Exception ex)
         {
             await Dispatcher.UIThread.InvokeAsync(() => progressWindow?.Close());
-            await ShowMessageBoxAsync($"Failed to update Quiver Launcher: {ex.Message}", "Update Error");
+            await ShowMessageBoxAsync($"Failed to update {QuiverLauncherProfile.Instance.DisplayName}: {ex.Message}", "Update Error");
         }
     }
 

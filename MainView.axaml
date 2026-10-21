@@ -70,7 +70,7 @@
 								VerticalAlignment="Center"
 								Margin="20,0,0,0"
 								Spacing="2">
-						<TextBlock Text="QUIVER"
+						<TextBlock Text="FLETCH"
 								   FontSize="18"
 								   FontWeight="Bold"
 								   Foreground="{DynamicResource ThemeText}"
@@ -174,7 +174,7 @@
 								Classes="iconbutton"
 								Width="44"
 								Height="44"
-								ToolTip.Tip="QuiverLauncher.com"
+								ToolTip.Tip="Website"
 								Click="WebsiteButton_Click">
 							<Image Width="32" Height="32"
 								   Source="avares://QuiverLauncher/Assets/quiver-icon.png"/>
@@ -203,7 +203,7 @@
 								Classes="iconbutton"
 								Width="44"
 								Height="44"
-								ToolTip.Tip="Support Quiver on Patreon"
+								ToolTip.Tip="Patreon"
 								Click="PatreonButton_Click">
 							<Image Width="32" Height="32"
 								   Source="avares://QuiverLauncher/Assets/Patreon.png"/>

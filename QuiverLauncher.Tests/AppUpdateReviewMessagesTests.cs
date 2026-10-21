@@ -79,7 +79,7 @@ public class AppUpdateReviewMessagesTests
             [PendingGame("Doom", "v1.0.0", "v1.1.0")]);
 
         summary.Should().Be(
-            "Quiver Launcher update v2.3.2 is available.\n\n" +
+            "Fletch update v2.3.2 is available.\n\n" +
             "1 app update needs review:\n\n" +
             "• Doom (v1.0.0 → v1.1.0)\n\n" +
             "What would you like to update?");

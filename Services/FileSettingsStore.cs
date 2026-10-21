@@ -69,7 +69,7 @@ public class FileSettingsStore : ISettingsStore
         }
 
         throw new IOException(
-            $"Could not save settings to '{_settingsPath}'. Close any other running Quiver Launcher instances and try again.",
+            $"Could not save settings to '{_settingsPath}'. Close any other running {QuiverLauncherProfile.Instance.DisplayName} instances and try again.",
             lastError);
     }
 
