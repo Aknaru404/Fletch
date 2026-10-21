@@ -1,0 +1,129 @@
+name: iOS Build
+
+# Builds the unsigned Fletch IPA (signed later by Signulous) and smoke-tests it on iPhone and iPad simulators.
+on:
+  push:
+    branches: [ "main", "claude/**" ]
+    tags: [ "fletch-v*" ]
+    # A run takes about an hour on the Intel runner; skip pushes that cannot change the app.
+    paths-ignore: [ "docs/**", "**/*.md", ".claude/**", "scripts/harness/**" ]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ios-${{ github.ref }}
+  cancel-in-progress: true
+
+env:
+  BUNDLE_ID: io.github.aknaru404.fletch
+  # Must match what the pinned iOS SDK pack requires (scripts/ci/ios-workload-rollback.json).
+  XCODE_VERSION: "26.3"
+  DOTNET_CLI_TELEMETRY_OPTOUT: "1"
+  DOTNET_NOLOGO: "1"
+
+jobs:
+  ios:
+    # One macOS job per push. Intel image: arm64 macOS runners were repeatedly unavailable (PLAN R7).
+    # The device IPA is still arm64 (cross-compiled); only the simulator build follows the runner.
+    runs-on: macos-26-intel
+    timeout-minutes: 75
+
+    steps:
+    - name: Checkout
+      uses: actions/checkout@v4
+
+    # The iOS workload is pinned to SDK pack 26.2.10233 (scripts/ci/ios-workload-rollback.json), which needs
+    # Xcode 26.3. Runner images do not ship Xcode 27 yet, which the newest workload (27.x) requires.
+    - name: Select Xcode
+      run: |
+        ls -d /Applications/Xcode*.app
+        xcode="/Applications/Xcode_${XCODE_VERSION}.app"
+        [ -d "$xcode" ] || { echo "::error::Xcode $XCODE_VERSION is not on this runner image"; exit 1; }
+        sudo xcode-select -s "$xcode"
+        case "$RUNNER_ARCH" in ARM64) sim=iossimulator-arm64 ;; *) sim=iossimulator-x64 ;; esac
+        echo "SIM_RID=$sim" >> "$GITHUB_ENV"
+        xcodebuild -version
+
+    - name: Setup .NET
+      uses: actions/setup-dotnet@v4
+      with:
+        dotnet-version: 10.0.x
+
+    - name: Install iOS workload
+      run: |
+        dotnet workload config --update-mode manifests
+        dotnet workload install ios --from-rollback-file scripts/ci/ios-workload-rollback.json
+        dotnet workload list
+
+    - name: Build device app (unsigned)
+      run: scripts/ci/ios-build.sh ios-arm64 -p:EnableCodeSigning=false
+
+    - name: Package and check IPA
+      run: |
+        app="$(find Fletch.iOS/bin/Release -type d -path '*ios-arm64*' -name Fletch.app | head -1)"
+        [ -d "$app" ] || { echo "::error::Fletch.app not found"; exit 1; }
+        plutil -p "$app/Info.plist" | grep -E 'CFBundleIdentifier|CFBundleDisplayName|MinimumOSVersion|CFBundleShortVersionString'
+        [ "$(plutil -extract CFBundleIdentifier raw "$app/Info.plist")" = "$BUNDLE_ID" ] || { echo "::error::wrong bundle id"; exit 1; }
+        [ -x "$app/Fletch" ] || { echo "::error::app executable missing"; exit 1; }
+        [ ! -e "$app/embedded.mobileprovision" ] || { echo "::error::IPA must be unsigned"; exit 1; }
+        [ "$(lipo -archs "$app/Fletch")" = "arm64" ] || { echo "::error::executable is not arm64-only: $(lipo -archs "$app/Fletch")"; exit 1; }
+        [ "$(plutil -extract MinimumOSVersion raw "$app/Info.plist")" = "17.0" ] || { echo "::error::MinimumOSVersion is not 17.0"; exit 1; }
+        version="$(plutil -extract CFBundleShortVersionString raw "$app/Info.plist")"
+        mkdir -p staging/Payload
+        cp -R "$app" staging/Payload/
+        ipa="artifacts/Fletch-${version}-${GITHUB_SHA::7}-unsigned.ipa"
+        (cd staging && zip -qry "../$ipa" Payload)
+        unzip -l "$ipa" | grep -q ' Payload/Fletch.app/Fletch$' || { echo "::error::IPA layout is not Payload/Fletch.app"; exit 1; }
+        echo "::notice::IPA size $(stat -f%z "$ipa") bytes"
+        ls -l artifacts
+
+    - name: Build simulator app
+      run: scripts/ci/ios-build.sh "$SIM_RID"
+
+    - name: Simulator smoke test (iPhone and iPad)
+      run: |
+        sim_app="$(find Fletch.iOS/bin/Release -type d -path "*$SIM_RID*" -name Fletch.app | head -1)"
+        [ -d "$sim_app" ] || { echo "::error::simulator Fletch.app not found"; exit 1; }
+        devices="$(xcrun simctl list devices available -j)"
+        pick() {
+          echo "$devices" | jq -r --arg p "$1" \
+            '[.devices | to_entries[] | select(.key | test("iOS"))
+              | {v: (.key | capture("iOS-(?<a>[0-9]+)-(?<b>[0-9]+)") | [(.a|tonumber), (.b|tonumber)]), d: .value[]}
+              | select(.d.name | startswith($p))] | sort_by(.v) | last | .d.udid'
+        }
+        status=0
+        smoke() {
+          local label="$1" udid="$2"
+          [ -n "$udid" ] && [ "$udid" != "null" ] || { echo "::error::no $label simulator available"; status=1; return; }
+          echo "== $label ($udid)"
+          xcrun simctl boot "$udid" || true
+          xcrun simctl bootstatus "$udid" -b || { echo "::error::$label simulator did not boot"; status=1; return; }
+          xcrun simctl install "$udid" "$sim_app" && xcrun simctl launch "$udid" "$BUNDLE_ID" \
+            || { echo "::error::install or launch failed on $label"; status=1; }
+          sleep 45
+          xcrun simctl io "$udid" screenshot "artifacts/screenshot-$label.png"
+          if xcrun simctl spawn "$udid" launchctl list | grep -q "$BUNDLE_ID"; then
+            echo "$label: Fletch still running after 45 s"
+          else
+            echo "::error::Fletch is not running on $label 45 s after launch"
+            status=1
+          fi
+          data="$(xcrun simctl get_app_container "$udid" "$BUNDLE_ID" data 2>/dev/null || true)"
+          [ -f "$data/Documents/crash.log" ] && cp "$data/Documents/crash.log" "artifacts/crash-$label.log"
+          xcrun simctl spawn "$udid" log show --last 3m --style compact --predicate 'process == "Fletch"' > "artifacts/log-$label.txt" || true
+          xcrun simctl shutdown "$udid" || true
+        }
+        smoke iphone "$(pick iPhone)"
+        smoke ipad "$(pick 'iPad Pro')"
+        exit $status
+
+    - name: Upload IPA, screenshots and logs
+      if: always()
+      uses: actions/upload-artifact@v4
+      with:
+        name: fletch-ios-${{ github.sha }}
+        path: artifacts/
+        if-no-files-found: warn
+        retention-days: 30

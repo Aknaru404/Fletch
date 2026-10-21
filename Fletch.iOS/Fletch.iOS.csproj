@@ -1,0 +1,40 @@
+<Project Sdk="Microsoft.NET.Sdk">
+	<PropertyGroup>
+		<OutputType>Exe</OutputType>
+		<TargetFramework>net10.0-ios</TargetFramework>
+		<SupportedOSPlatformVersion>17.0</SupportedOSPlatformVersion>
+		<Nullable>enable</Nullable>
+		<ImplicitUsings>enable</ImplicitUsings>
+		<ApplicationId>io.github.aknaru404.fletch</ApplicationId>
+		<ApplicationTitle>Fletch</ApplicationTitle>
+		<ApplicationVersion>1</ApplicationVersion>
+		<ApplicationDisplayVersion>0.1.0</ApplicationDisplayVersion>
+		<DisableTransitiveProjectReferences>true</DisableTransitiveProjectReferences>
+		<RootNamespace>Fletch.iOS</RootNamespace>
+		<AssemblyName>Fletch</AssemblyName>
+		<!-- Trim only the SDK until the shared code's reflection-based JSON moves to source generation (PLAN M7). -->
+		<MtouchLink>SdkOnly</MtouchLink>
+		<!-- Settings and library still use reflection-based System.Text.Json; trimmed builds may default this off. -->
+		<JsonSerializerIsReflectionEnabledByDefault>true</JsonSerializerIsReflectionEnabledByDefault>
+	</PropertyGroup>
+
+	<ItemGroup>
+		<PackageReference Include="Avalonia.iOS" Version="12.1.1" />
+		<PackageReference Include="Avalonia.Fonts.Inter" Version="12.1.1" />
+		<PackageReference Include="System.Drawing.Common" Version="10.0.3">
+			<ExcludeAssets>all</ExcludeAssets>
+			<PrivateAssets>all</PrivateAssets>
+		</PackageReference>
+		<!-- iOS has no SDL controller input (PlatformCapabilities.SupportsGamepadSdl), so leave SDL's native
+		     libraries out of the app. Keep the version in step with QuiverLauncher.App.csproj. -->
+		<PackageReference Include="ppy.SDL3-CS" Version="2026.1002.1">
+			<ExcludeAssets>native</ExcludeAssets>
+		</PackageReference>
+	</ItemGroup>
+
+	<ItemGroup>
+		<ProjectReference Include="..\QuiverLauncher.App.csproj">
+			<AdditionalProperties>QuiverExcludeWindowsDrawing=true</AdditionalProperties>
+		</ProjectReference>
+	</ItemGroup>
+</Project>

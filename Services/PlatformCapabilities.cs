@@ -1,11 +1,11 @@
 namespace QuiverLauncher.Services;
 
 /// <summary>
-/// Runtime feature switches for desktop vs Android.
+/// Runtime feature switches for desktop vs mobile (Android, iOS).
 /// </summary>
 public static class PlatformCapabilities
 {
-    public static bool IsMobile => OperatingSystem.IsAndroid();
+    public static bool IsMobile => OperatingSystem.IsAndroid() || OperatingSystem.IsIOS();
 
     public static bool IsDesktop => !IsMobile;
 

@@ -75,6 +75,7 @@
 		<Compile Remove="QuiverLauncher.Tests\**\*.cs" />
 		<Compile Remove="QuiverLauncher.Desktop\**\*.cs" />
 		<Compile Remove="QuiverLauncher.Android\**\*.cs" />
+		<Compile Remove="Fletch.iOS\**\*.cs" />
 		<Compile Remove="Program.cs" />
         <Compile Remove="tools\**\*.cs" />
 		<Compile Remove="_test_build\**\*.cs" />
@@ -85,12 +86,14 @@
 		<EmbeddedResource Remove="QuiverLauncher.Tests\**\*.*" />
 		<EmbeddedResource Remove="QuiverLauncher.Desktop\**\*.*" />
 		<EmbeddedResource Remove="QuiverLauncher.Android\**\*.*" />
+		<EmbeddedResource Remove="Fletch.iOS\**\*.*" />
 		<EmbeddedResource Remove="_test_build\**\*.*" />
 		<EmbeddedResource Remove="artifacts\**\*.*" />
 		<None Remove="lib\QuiverLauncher.Core\**\*.*" />
 		<None Remove="QuiverLauncher.Tests\**\*.*" />
 		<None Remove="QuiverLauncher.Desktop\**\*.*" />
 		<None Remove="QuiverLauncher.Android\**\*.*" />
+		<None Remove="Fletch.iOS\**\*.*" />
 		<None Remove="_test_build\**\*.*" />
 		<None Remove="artifacts\**\*.*" />
 	</ItemGroup>
