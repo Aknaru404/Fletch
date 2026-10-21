@@ -39,5 +39,8 @@
 	<true/>
 	<key>LSSupportsOpeningDocumentsInPlace</key>
 	<true/>
+	<!-- Not a game: iPadOS otherwise warns that the Game Mode key is missing. -->
+	<key>LSSupportsGameMode</key>
+	<false/>
 </dict>
 </plist>

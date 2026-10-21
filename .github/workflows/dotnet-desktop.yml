@@ -13,17 +13,12 @@ permissions:
 
 env:
   VELOPACK_VERSION: "1.2.0"
-  # Anonymous usage data: the same PostHog project as the website and v4, built into release builds.
-  POSTHOG_PROJECT_TOKEN: ${{ vars.POSTHOG_PROJECT_TOKEN }}
-  PACK_ID: QuiverLauncher
+  PACK_ID: Fletch
   REPO_URL: https://github.com/${{ github.repository }}
 
 jobs:
   test:
     runs-on: ubuntu-latest
-    env:
-      # Tests never send usage data, and never see the question about it.
-      POSTHOG_PROJECT_TOKEN: ""
 
     steps:
     - name: Checkout
@@ -497,13 +492,13 @@ jobs:
         {
           echo "## Downloads"
           echo ""
-          echo "- **Windows:** [${BASE}/QuiverLauncher-win-Portable.zip](${BASE}/QuiverLauncher-win-Portable.zip)"
-          echo "- **Linux x64:** [${BASE}/QuiverLauncher-linux-x64.AppImage](${BASE}/QuiverLauncher-linux-x64.AppImage)"
-          echo "- **Linux ARM64:** [${BASE}/QuiverLauncher-linux-arm64.AppImage](${BASE}/QuiverLauncher-linux-arm64.AppImage)"
+          echo "- **Windows:** [${BASE}/${{ env.PACK_ID }}-win-Portable.zip](${BASE}/${{ env.PACK_ID }}-win-Portable.zip)"
+          echo "- **Linux x64:** [${BASE}/${{ env.PACK_ID }}-linux-x64.AppImage](${BASE}/${{ env.PACK_ID }}-linux-x64.AppImage)"
+          echo "- **Linux ARM64:** [${BASE}/${{ env.PACK_ID }}-linux-arm64.AppImage](${BASE}/${{ env.PACK_ID }}-linux-arm64.AppImage)"
           echo "- **Linux x64 Flatpak (experimental):** [QuiverLauncher.flatpak](${BASE}/QuiverLauncher.flatpak)"
           echo "- **Android:** [${BASE}/QuiverLauncher-android.apk](${BASE}/QuiverLauncher-android.apk)"
-          echo "- **macOS (Apple Silicon):** [${BASE}/QuiverLauncher-osx-arm64-Portable.zip](${BASE}/QuiverLauncher-osx-arm64-Portable.zip)"
-          echo "- **macOS (Intel):** [${BASE}/QuiverLauncher-osx-x64-Portable.zip](${BASE}/QuiverLauncher-osx-x64-Portable.zip)"
+          echo "- **macOS (Apple Silicon):** [${BASE}/${{ env.PACK_ID }}-osx-arm64-Portable.zip](${BASE}/${{ env.PACK_ID }}-osx-arm64-Portable.zip)"
+          echo "- **macOS (Intel):** [${BASE}/${{ env.PACK_ID }}-osx-x64-Portable.zip](${BASE}/${{ env.PACK_ID }}-osx-x64-Portable.zip)"
           echo ""
           echo "---"
           echo ""

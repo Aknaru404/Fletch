@@ -5,7 +5,7 @@
 		<SupportedOSPlatformVersion>24</SupportedOSPlatformVersion>
 		<Nullable>enable</Nullable>
 		<ImplicitUsings>enable</ImplicitUsings>
-		<ApplicationId>com.quiverlauncher.app</ApplicationId>
+		<ApplicationId>io.github.aknaru404.fletch.android</ApplicationId>
 		<ApplicationVersion>30501</ApplicationVersion>
 		<ApplicationDisplayVersion>3.5.1</ApplicationDisplayVersion>
 		<AndroidPackageFormat>apk</AndroidPackageFormat>

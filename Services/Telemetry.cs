@@ -1,5 +1,4 @@
 using System.Diagnostics;
-using System.Reflection;
 using System.Runtime.InteropServices;
 using System.Text;
 using System.Text.Json.Nodes;
@@ -13,14 +12,11 @@ namespace QuiverLauncher.Services;
 /// starting). Events carry a random install id and what this copy of the launcher is (version, OS),
 /// never a name, and nothing that looks like a file or folder or the computer's user name (<see cref="Scrub"/>).
 ///
-/// Without a project token nothing is sent and neither the prompt nor the setting shows. Release builds
-/// get it from the POSTHOG_PROJECT_TOKEN variable at build time; QUIVER_POSTHOG_PROJECT_TOKEN and
-/// QUIVER_POSTHOG_HOST override it when running a build by hand.
+/// Without a project token and a host nothing is sent and neither the prompt nor the setting shows.
+/// Fletch builds in neither and reads neither from the environment, so this build never sends usage data.
 /// </summary>
 public sealed class Telemetry : IDisposable
 {
-    /// <summary>PostHog's US cloud, where the website's and the v4 launcher's events go too.</summary>
-    public const string DefaultHost = "https://us.i.posthog.com";
     /// <summary>Tells this launcher's events apart from the website's ("website") and v4's ("launcher").</summary>
     public const string AppName = "launcher-csharp";
     const int MaxQueued = 500;
@@ -28,10 +24,13 @@ public sealed class Telemetry : IDisposable
     const int MaxExceptionsPerSession = 25;
     static readonly TimeSpan FlushInterval = TimeSpan.FromSeconds(30);
 
-    public static Telemetry Current { get; set; } = new(BuildToken(), Environment.GetEnvironmentVariable("QUIVER_POSTHOG_HOST"));
+    public static Telemetry Current { get; set; } = CreateDefault();
+
+    /// <summary>The client this launcher makes for itself: no token and no host, so never available.</summary>
+    internal static Telemetry CreateDefault() => new(BuildToken());
 
     readonly string? _token;
-    readonly string _host;
+    readonly string? _host;
     readonly Func<HttpRequestMessage, CancellationToken, Task<HttpResponseMessage>> _send;
     readonly object _gate = new();
     readonly List<JsonObject> _pending = [];
@@ -54,14 +53,14 @@ public sealed class Telemetry : IDisposable
         Func<HttpRequestMessage, CancellationToken, Task<HttpResponseMessage>>? send = null)
     {
         _token = string.IsNullOrWhiteSpace(token) ? null : token.Trim();
-        _host = string.IsNullOrWhiteSpace(host) ? DefaultHost : host.Trim().TrimEnd('/');
+        _host = string.IsNullOrWhiteSpace(host) ? null : host.Trim().TrimEnd('/');
         _send = send ?? ((request, token) => SharedClient.SendAsync(request, token));
         _timer = new Timer(_ => _ = FlushAsync(), null, Timeout.Infinite, Timeout.Infinite);
         _context = BuildContext();
     }
 
-    /// <summary>Whether this build can send anything: it has a project token (and a test token never reaches PostHog itself).</summary>
-    public bool Available => _token != null && !(_token.StartsWith("phc_test", StringComparison.OrdinalIgnoreCase) && IsPostHogCloud(_host));
+    /// <summary>Whether this build can send anything: it was given both a project token and a host.</summary>
+    public bool Available => _token != null && _host != null;
 
     /// <summary>Sending: available, and the player said yes.</summary>
     public bool Enabled
@@ -446,18 +445,8 @@ public sealed class Telemetry : IDisposable
         };
     }
 
-    static bool IsPostHogCloud(string host) =>
-        Uri.TryCreate(host, UriKind.Absolute, out var uri) &&
-        (uri.Host.Equals("posthog.com", StringComparison.OrdinalIgnoreCase) || uri.Host.EndsWith(".posthog.com", StringComparison.OrdinalIgnoreCase));
-
-    /// <summary>The project token: set when running by hand, else built in by a release build.</summary>
-    static string? BuildToken()
-    {
-        var runtime = Environment.GetEnvironmentVariable("QUIVER_POSTHOG_PROJECT_TOKEN");
-        if (!string.IsNullOrWhiteSpace(runtime)) return runtime;
-        return typeof(Telemetry).Assembly.GetCustomAttributes<AssemblyMetadataAttribute>()
-            .FirstOrDefault(a => a.Key == "PostHogProjectToken")?.Value;
-    }
+    /// <summary>The project token. Fletch sends no data upstream, so there is none, built in or from the environment.</summary>
+    static string? BuildToken() => null;
 
     public void Dispose()
     {

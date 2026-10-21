@@ -8,7 +8,7 @@ namespace QuiverLauncher.Services;
 /// </summary>
 public static class QuiverLauncherPaths
 {
-    public const string AppName = "QuiverLauncher";
+    public const string AppName = "Fletch";
 
     /// <summary>Test override for the user-data root.</summary>
     public static string? OverrideUserDataRoot { get; set; }

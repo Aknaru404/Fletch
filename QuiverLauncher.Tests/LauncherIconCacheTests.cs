@@ -20,6 +20,7 @@ public class LauncherIconCacheTests
         {
             requests++;
             Assert.Equal(host, request.RequestUri!.Host);
+            Assert.Equal(QuiverLauncherProfile.Instance.UserAgent, request.Headers.UserAgent.ToString());
             Assert.Equal(authenticated ? "dummy-token" : null, request.Headers.Authorization?.Parameter);
             Assert.DoesNotContain("/blob/", request.RequestUri.AbsolutePath);
             return new HttpResponseMessage(HttpStatusCode.Forbidden) { Content = new StringContent("rate limited") };

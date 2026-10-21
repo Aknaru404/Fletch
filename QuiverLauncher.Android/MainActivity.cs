@@ -8,7 +8,7 @@ using QuiverLauncher.Services;
 namespace QuiverLauncher.Android;
 
 [Activity(
-    Label = "Quiver Launcher",
+    Label = "Fletch",
     Theme = "@style/MyTheme.NoActionBar",
     Icon = "@mipmap/ic_launcher",
     MainLauncher = true,

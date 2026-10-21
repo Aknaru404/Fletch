@@ -21,7 +21,7 @@ public readonly record struct RepositoryReadmeResult(
 public sealed class RepositoryReadmeService
 {
     public static readonly TimeSpan CacheTtl = TimeSpan.FromHours(12);
-    public const string UserAgent = "QuiverLauncher";
+    public static string UserAgent => QuiverLauncherProfile.Instance.UserAgent;
 
     private static readonly string[] GitLabReadmeNames =
     [
