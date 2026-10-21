@@ -3,7 +3,7 @@
 | Field | Value |
 |---|---|
 | Repository | Aknaru404/Fletch (fork of tgeorgiadis/quiver-launcher 3.5.1, MIT) |
-| Plan version | 0.1 (draft for owner approval) |
+| Plan version | 0.2 (M0 approved, M1 approved, 2026-10-21) |
 | Date | 2026-10-21 |
 | Current milestone | see `docs/fletch/STATE` |
 
@@ -31,7 +31,10 @@ Out of scope: launching downloaded apps, installing packages from inside the app
 | D5 | Name Fletch, repo Aknaru404/Fletch | Owner |
 | D6 | Telemetry and Quiver catalog both off | Owner |
 | D7 | Gates G1 to G5 as defined in `CLAUDE.md` | Owner |
-| D8 | Bundle ID `io.github.aknaru404.fletch` | Proposed; confirm (section 7) |
+| D8 | Bundle ID `io.github.aknaru404.fletch` | Owner, 2026-10-21 |
+| D9 | Generated fletching-mark icon, replaceable later | Owner, 2026-10-21 |
+| D10 | Fletch checks its own GitHub releases and shows a notice with a link; no self-update | Owner, 2026-10-21 |
+| D11 | Desktop and Android heads keep building and testing; not released from the fork | Owner, 2026-10-21 |
 
 ## 3. Architecture
 
@@ -66,8 +69,8 @@ Status: Draft, Approved, In progress, Done. App code starts only for a task unde
 
 | Milestone | Tasks | Gates | Device check | Status |
 |---|---|---|---|---|
-| M0 Harness | T0.1 `CLAUDE.md`, agents, gate scripts, SessionStart hook. T0.2 This plan. T0.3 Baseline: Linux suite 1,788 passed, 3 root-only failures tolerated. | G1, owner review | No | In review |
-| M1 Toolchain spike | T1.1 Empty `Fletch.iOS` head showing the existing `MainView`. T1.2 `ios.yml` producing an unsigned IPA and simulator screenshots. T1.3 Fork CI: upstream pack jobs set to manual. T1.4 Owner installs via Signulous and confirms launch. | G1 to G5 | Yes (launch only) | Draft |
+| M0 Harness | T0.1 `CLAUDE.md`, agents, gate scripts, SessionStart hook. T0.2 This plan. T0.3 Baseline: Linux suite 1,789 passed, 3 root-only failures tolerated. T0.4 Fork CI: upstream Windows, macOS and Flatpak packaging run only on manual dispatch (moved from T1.3; macOS runner capacity cancelled PR 1). | G1, owner review | No | Approved |
+| M1 Toolchain spike | T1.1 Empty `Fletch.iOS` head showing the existing `MainView`. T1.2 `ios.yml` producing an unsigned IPA and simulator screenshots. T1.3 (moved to T0.4). T1.4 Owner installs via Signulous and confirms launch. | G1 to G5 | Yes (launch only) | Approved |
 | M2 Identity and upstream services | T2.1 Fletch identifiers and icon. T2.2 Remove telemetry. T2.3 Remove catalog and announcements, hide the catalog UI. T2.4 Update checks point to Aknaru404/Fletch releases (notify only). | G1 to G4 | No | Draft |
 | M3 Platform layer | T3.1 Capability flags and call-site audit. T3.2 iOS paths. T3.3 `TargetOS.iOS` and asset selection. T3.4 Disable Wine, Steam shortcuts, tray, gamepad and Velopack on iOS through the flags. | G1 to G4 | No | Draft |
 | M4 IPA hand-off | T4.1 Download to `Documents/Downloads` with progress and cancel. T4.2 Share sheet hand-off. T4.3 Library states: Not downloaded, Downloaded, Update available. T4.4 Delete downloaded file. | G1 to G5 | Yes | Draft |
@@ -85,12 +88,7 @@ Status: Draft, Approved, In progress, Done. App code starts only for a task unde
 
 ## 7. Open items for owner confirmation
 
-| Ref | Item | Proposed default |
-|---|---|---|
-| Q1 | Bundle ID | `io.github.aknaru404.fletch` |
-| Q2 | App icon | Simple generated arrow-fletching mark; replaceable later |
-| Q3 | Should Fletch check its own GitHub releases and show "new Fletch version available"? | Yes, notify only, link to the release page |
-| Q4 | Desktop and Android heads in the fork | Keep building and tested; not released from the fork |
+None. Q1 to Q4 decided on 2026-10-21 as D8 to D11.
 
 ## 8. Risks
 
@@ -102,3 +100,4 @@ Status: Draft, Approved, In progress, Done. App code starts only for a task unde
 | R4 | Shared-code changes conflict with upstream releases | Medium | Medium | Capability flags; judge-simplicity; small diffs |
 | R5 | iOS suspends long downloads in the background | Medium | Medium | Resume-safe downloads; clear failure state (M4) |
 | R6 | GitHub API rate limits without a token | Medium | Low | Existing cache files; optional personal token setting |
+| R7 | GitHub macOS runner capacity delays or cancels iOS jobs | Medium | Medium | One macOS job per push; `workflow_dispatch` re-run; no macOS work on upstream jobs |
