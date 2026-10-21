@@ -21,8 +21,9 @@ env:
 
 jobs:
   ios:
-    # One macOS job per push: macOS runners are scarce (PLAN R7).
-    runs-on: macos-26
+    # One macOS job per push. Intel image: arm64 macOS runners were repeatedly unavailable (PLAN R7).
+    # The device IPA is still arm64 (cross-compiled); only the simulator build follows the runner.
+    runs-on: macos-26-intel
     timeout-minutes: 75
 
     steps:
@@ -37,6 +38,8 @@ jobs:
         xcode="$(ls -d /Applications/Xcode_26.2*.app | sort -V | tail -1)"
         [ -n "$xcode" ] || { echo "::error::Xcode 26.2 is not on this runner image"; exit 1; }
         sudo xcode-select -s "$xcode"
+        case "$RUNNER_ARCH" in ARM64) sim=iossimulator-arm64 ;; *) sim=iossimulator-x64 ;; esac
+        echo "SIM_RID=$sim" >> "$GITHUB_ENV"
         xcodebuild -version
 
     - name: Setup .NET
@@ -68,11 +71,11 @@ jobs:
         ls -l artifacts
 
     - name: Build simulator app
-      run: scripts/ci/ios-build.sh iossimulator-arm64
+      run: scripts/ci/ios-build.sh "$SIM_RID"
 
     - name: Simulator smoke test (iPhone and iPad)
       run: |
-        sim_app="$(find Fletch.iOS/bin/Release -type d -path '*iossimulator-arm64*' -name Fletch.app | head -1)"
+        sim_app="$(find Fletch.iOS/bin/Release -type d -path "*$SIM_RID*" -name Fletch.app | head -1)"
         [ -d "$sim_app" ] || { echo "::error::simulator Fletch.app not found"; exit 1; }
         devices="$(xcrun simctl list devices available -j)"
         pick() {

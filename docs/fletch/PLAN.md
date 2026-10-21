@@ -54,10 +54,10 @@ Out of scope: launching downloaded apps, installing packages from inside the app
 | Step | Where | Command or action |
 |---|---|---|
 | B1 Linux build and tests | Container (G1) and CI `test` job | `scripts/harness/gate-local.sh` |
-| B2 Select toolchain | CI, `macos-26` | `sudo xcode-select -s /Applications/Xcode_26.2.app`; `dotnet workload config --update-mode manifests`; `dotnet workload install ios --from-rollback-file scripts/ci/ios-workload-rollback.json` (pins the iOS 26.2 SDK pack; the 27.x workload needs Xcode 27, not yet on runner images) |
+| B2 Select toolchain | CI, `macos-26-intel` | `sudo xcode-select -s /Applications/Xcode_26.2.app`; `dotnet workload config --update-mode manifests`; `dotnet workload install ios --from-rollback-file scripts/ci/ios-workload-rollback.json` (pins the iOS 26.2 SDK pack; the 27.x workload needs Xcode 27, not yet on runner images) |
 | B3 Device build, unsigned | CI | `dotnet publish Fletch.iOS -c Release -f net10.0-ios -r ios-arm64 -p:EnableCodeSigning=false -p:ArchiveOnBuild=false` |
 | B4 Package IPA | CI | `mkdir Payload && cp -R <publish>/Fletch.app Payload/ && zip -qry Fletch-<version>-unsigned.ipa Payload` |
-| B5 Simulator smoke | CI | Build `-r iossimulator-arm64`; `xcrun simctl boot` iPhone and iPad; `simctl install`; `simctl launch io.github.aknaru404.fletch`; wait 20 s; `simctl io booted screenshot` per device |
+| B5 Simulator smoke | CI | Build `-r iossimulator-x64` (runner architecture); `xcrun simctl boot` iPhone and iPad; `simctl install`; `simctl launch io.github.aknaru404.fletch`; wait 20 s; `simctl io booted screenshot` per device |
 | B6 Publish | CI on tag `fletch-v*` | GitHub Release with the IPA attached |
 | B7 Install | Owner | Download IPA, upload to Signulous, install, run the device checklist |
 
@@ -100,4 +100,4 @@ None. Q1 to Q4 decided on 2026-10-21 as D8 to D11.
 | R4 | Shared-code changes conflict with upstream releases | Medium | Medium | Capability flags; judge-simplicity; small diffs |
 | R5 | iOS suspends long downloads in the background | Medium | Medium | Resume-safe downloads; clear failure state (M4) |
 | R6 | GitHub API rate limits without a token | Medium | Low | Existing cache files; optional personal token setting |
-| R7 | GitHub macOS runner capacity delays or cancels iOS jobs | Medium | Medium | One macOS job per push; `workflow_dispatch` re-run; no macOS work on upstream jobs |
+| R7 | GitHub macOS runner capacity delays or cancels iOS jobs | Occurred (M1: arm64 runners not acquired 3 times) | Medium | Intel `macos-26-intel` runner; one macOS job per push; `workflow_dispatch` re-run; no macOS work on upstream jobs |
