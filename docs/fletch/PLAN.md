@@ -38,6 +38,7 @@ Out of scope: launching downloaded apps, installing packages from inside the app
 | D12 | Upstream services are disabled at the source (hosts blanked, catalog entry points hidden), not deleted, to keep the upstream diff small | Owner, 2026-10-21 |
 | D13 | M2 rebrands identifiers and all text reachable on iOS; Desktop/Android-only text (tray, Mac menu, CLI, Windows installer, Flatpak, Android updater) stays as upstream | Owner, 2026-10-21 |
 | D14 | The Fletch "new version available" notice moves to M8, when a release exists to detect; M2 only points update sources at Aknaru404/Fletch | Owner, 2026-10-21 |
+| D15 | The fallback data folder is renamed to `Fletch` (macOS/XDG) with no migration from `QuiverLauncher`; Fletch is not released for desktop, and iOS keeps its data in Documents | G2 M2 T2.1-A1, 2026-10-21 |
 
 ## 3. Architecture
 
