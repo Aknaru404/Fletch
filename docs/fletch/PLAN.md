@@ -130,3 +130,17 @@ Assumptions: iPad Pro 11-inch (2018, A12X, 4 GB RAM), owner-supplied game data, 
 | Fallout 3/NV/4, Oblivion, Skyrim, Diablo II/III, Assassin's Creed, God of War (PS2), Guild Wars 1/2, Xbox 360 RPGs | Not possible: closed engines with no open reimplementation, online-only, or no recompilation; 360 titles exceed 4 GB RAM | n/a | n/a | n/a |
 
 Constraints: about 4.2 GB free storage on the device; Morrowind data with expansions is about 1.2 GB.
+
+### X3 Xbox 360 recompilation basis (2026-10-21; ideas only, no decision)
+
+| Stage | What | Purpose | Rough effort |
+|---|---|---|---|
+| A | Port an existing 360 recompilation (UnleashedRecomp, built on XenonRecomp) to iPadOS: ARM64 in place of x64 vector code, Metal backend, iOS packaging | Builds a reusable iOS runtime and Metal layer on a project known to work | Weeks to a few months; about $300 to $1,500; medium risk |
+| B | Generalise Stage A into a 360-to-iOS toolkit | Shared basis for later titles | Weeks; about $200 to $800 |
+| C | Assassin's Creed 1 from the owner's own dump on that toolkit | First-of-its-kind recompilation | Months; several thousand dollars; high risk of an incomplete result |
+
+- The instruction set and translator are the same for every game. The per-game work is code analysis, statically linked middleware, GPU usage, timing and threading.
+- The A12X (CPU, GPU, 4 GB RAM) is not the limiting factor for native recompiled code. The engineering effort is.
+- Stage C needs a Mac with Xcode for debugging. Recompiled code derived from the game must stay in a private repository and be used for personal sideloading only, which means paid private macOS CI minutes.
+- Decrypting a console executable sits in a legal grey area, including in the UK.
+- Oblivion (360) and Assassin's Creed (360) have no existing recompilation project. REA (morluto/rea) can help only with binary analysis; it does not recompile.
