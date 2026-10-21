@@ -159,3 +159,14 @@ Constraints: about 4.2 GB free storage on the device; Morrowind data with expans
 - Decrypting a console executable engages the anti-circumvention provisions (CDPA s.296ZA onwards); the decompilation exception (s.50B) is narrow, for interoperability.
 - A recompiled IPA contains derived game code: keep it for personal sideloading only and never publish it. Sharing it is where takedowns happen.
 - Sideloading one's own build to one's own device through Signulous is within normal developer signing use.
+
+### X3 alternative: Assassin's Creed via the GOG PC version (2026-10-21; ideas only)
+
+| Aspect | Xbox 360 dump | GOG PC version (Assassin's Creed: Director's Cut, DRM-free, Windows) |
+|---|---|---|
+| Legal | Decrypting the console executable engages UK anti-circumvention provisions | DRM-free, so there is no protection to circumvent; no disc dump needed |
+| Code to translate | PowerPC (Xbox 360), handled by XenonRecomp | x86 Windows; static recompilation tools from x86 to ARM64 are far less mature |
+| Graphics | Xbox 360 GPU to Metal | DirectX 9/10 to Metal (DXVK or wined3d with MoltenVK) |
+| Run unmodified on iPad | n/a | Not possible: box64, FEX and Wine all need JIT |
+
+The GOG route removes the legal issue and makes supplying assets through Files simple, but the code-translation work is at least as hard as the 360 route. Research-scale only. GOG users report launch problems on modern Windows; check the GOG support page before buying.
