@@ -171,7 +171,7 @@ public class BrowseTests : IDisposable
 
         await browse.ReloadAsync(TestContext.Current.CancellationToken);
 
-        browse.Status.Should().StartWith("Couldn't reach quiverlauncher.com").And.Contain("Down for maintenance.");
+        browse.Status.Should().StartWith("Couldn't reach the catalog").And.Contain("Down for maintenance.");
         browse.Items.Should().BeEmpty();
         browse.IsLoading.Should().BeFalse();
     }

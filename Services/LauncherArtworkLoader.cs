@@ -22,9 +22,9 @@ public sealed class LauncherArtworkLoader : DiskCachedWebImageLoader
 {
     private const string FullSizeMarker = "#quiver-full-size";
 
-    // The same copies the website asks for (src/images.ts on the website), so the launcher reuses
-    // copies Cloudflare has already made instead of adding to the site's monthly resizing limit.
-    private const string Resizer = "https://quiverlauncher.com/cdn-cgi/image/";
+    // Upstream asked its own website's image resizer for smaller copies. Fletch sends nothing to the upstream author
+    // (PLAN D12), so it has no resizer and every image downloads from its own address.
+    private static readonly string? Resizer = null;
     private static readonly Regex ResizableArt =
         new(@"^https://cdn2\.steamgriddb\.com/(?:grid|hero)/[0-9a-f]+\.\w+$", RegexOptions.IgnoreCase | RegexOptions.CultureInvariant);
     private static readonly int[] CardWidths = [240, 360, 480, 720, 960];
@@ -73,7 +73,7 @@ public sealed class LauncherArtworkLoader : DiskCachedWebImageLoader
     public static string BannerUrl(string url) => Resized(url, BannerWidth, BannerQuality);
 
     private static string Resized(string url, int width, int quality) =>
-        ResizableArt.IsMatch(url) ? $"{Resizer}width={width},quality={quality},format=auto,fit=scale-down/{url}" : url;
+        Resizer is { } resizer && ResizableArt.IsMatch(url) ? $"{resizer}width={width},quality={quality},format=auto,fit=scale-down/{url}" : url;
 
     /// <summary>Asks for the image at its own size, for views wider than a card.</summary>
     public static string? FullSize(string? url) =>

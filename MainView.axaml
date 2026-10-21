@@ -170,6 +170,7 @@
 						<Border Height="1" Background="{DynamicResource ThemeBorder}" Margin="-12,0,-12,8"/>
 					<StackPanel Orientation="Horizontal" Spacing="8" HorizontalAlignment="Center">
 						<Button x:Name="WebsiteFooterButton"
+								IsVisible="{Binding ShowUpstreamLinks}"
 								Classes="iconbutton"
 								Width="44"
 								Height="44"
@@ -188,6 +189,7 @@
 								   Source="avares://QuiverLauncher/Assets/Github.png"/>
 						</Button>
 						<Button x:Name="DiscordFooterButton"
+								IsVisible="{Binding ShowUpstreamLinks}"
 								Classes="iconbutton"
 								Width="44"
 								Height="44"
@@ -197,6 +199,7 @@
 								   Source="avares://QuiverLauncher/Assets/Discord.png"/>
 						</Button>
 						<Button x:Name="PatreonFooterButton"
+								IsVisible="{Binding ShowUpstreamLinks}"
 								Classes="iconbutton"
 								Width="44"
 								Height="44"

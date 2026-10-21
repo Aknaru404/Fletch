@@ -199,8 +199,13 @@ public class KioskLockTests
             Dispatcher.UIThread.RunJobs();
             view.FindControl<Button>("SettingsButton")!.IsVisible.Should().BeTrue();
             view.FindControl<Button>("CloseLauncherButton")!.IsVisible.Should().BeTrue();
-            view.FindControl<Button>("BrowseNavButton")!.IsVisible.Should().BeTrue();
+            // Unlocked, the App Catalog stays hidden: Fletch has no catalog (PlatformCapabilities.HasAppCatalog).
+            view.FindControl<Button>("BrowseNavButton")!.IsVisible.Should().BeFalse();
             view.FindControl<StackPanel>("ExternalLinksHost")!.IsVisible.Should().BeTrue();
+            // Of the footer links only the project's own repository stays; upstream's website, Discord and Patreon are off.
+            view.FindControl<Button>("GitHubFooterButton")!.IsVisible.Should().BeTrue();
+            foreach (var upstream in new[] { "WebsiteFooterButton", "DiscordFooterButton", "PatreonFooterButton" })
+                view.FindControl<Button>(upstream)!.IsVisible.Should().BeFalse(upstream);
             view.FindControl<LibraryToolbarView>("LibraryToolbar")!
                 .FindControl<Button>("AddNewEntryButton")!.IsVisible.Should().BeTrue();
             window.WindowDecorations.Should().Be(WindowDecorations.Full);

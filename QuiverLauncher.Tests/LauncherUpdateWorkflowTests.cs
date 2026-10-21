@@ -61,6 +61,32 @@ public class LauncherUpdateWorkflowTests
         finally { await session.DisposeAsync(); window.Close(); }
     }
 
+    [AvaloniaFact]
+    public async Task First_run_welcome_does_not_open_the_catalog()
+    {
+        var store = new Store();
+        using var manager = new GameManager(store);
+        using var library = new LibraryViewModel(manager, new SettingsViewModel(store));
+        var session = new LauncherSession();
+        var overlay = new MessagePromptView(); overlay.Configure(session);
+        using var dialogs = new LauncherDialogLifetime(session.Token, action => action());
+        var window = new Window { Content = overlay, Width = 700, Height = 500 };
+        // OpenBrowse throws: the App Catalog is off in Fletch (PlatformCapabilities.HasAppCatalog).
+        var workflow = new LauncherUpdateWorkflow(manager, library.Settings, library, new ShellViewModel(), session,
+            new LauncherPromptService(session, dialogs, overlay), new ReviewPresentation(), () => null, new VelopackUpdateService(),
+            () => Task.CompletedTask, _ => Task.FromResult(false));
+        try
+        {
+            window.Show();
+            await workflow.ShowFirstRunWelcomeIfNeededAsync().WaitAsync(TimeSpan.FromSeconds(3));
+            store.Current.LocalFirstCatalogMigrationComplete.Should().BeTrue();
+            var welcome = LauncherPromptService.CreateWelcomeMessageBoxWindow(LauncherUpdateWorkflow.FirstRunWelcomeMessage, "Welcome");
+            Avalonia.LogicalTree.LogicalExtensions.GetLogicalDescendants(welcome).OfType<Button>()
+                .Select(b => b.Content as string).Should().NotContain("Browse app catalog");
+        }
+        finally { await session.DisposeAsync(); window.Close(); }
+    }
+
     private sealed class Store : ISettingsStore
     {
         public AppSettings Current { get; } = new() { AppsPath = Path.Combine(Path.GetTempPath(), "quiver-workflow-tests", Guid.NewGuid().ToString("N")) };

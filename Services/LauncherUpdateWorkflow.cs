@@ -105,7 +105,8 @@ public sealed class LauncherUpdateWorkflow : IUpdateCheckWorkflow
         await AskAboutUsageDataIfNeededAsync();
         if (_session.IsClosed)
             return;
-        _presentation.OpenBrowse();
+        if (PlatformCapabilities.HasAppCatalog)
+            _presentation.OpenBrowse();
         _settings.LocalFirstCatalogMigrationComplete = true;
         _settingsModel.SaveCurrent();
     }

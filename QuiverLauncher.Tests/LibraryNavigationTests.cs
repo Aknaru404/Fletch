@@ -11,7 +11,7 @@ namespace QuiverLauncher.Tests;
 public class LibraryNavigationTests
 {
     [AvaloniaFact]
-    public async Task Empty_library_buttons_are_selectable_and_activate_both_actions()
+    public async Task Empty_library_offers_adding_an_app_and_no_catalog()
     {
         var store = new Store();
         using var manager = new GameManager(store);
@@ -34,11 +34,12 @@ public class LibraryNavigationTests
             view.EmptyLibraryAddButton.Classes.Should().Contain("gamepad-focused");
             navigation.Confirm().Should().BeTrue();
             requests.Should().Equal(LibraryActionKind.EmptyLibraryAddApp);
-            navigation.Navigate(NavigationDirection.Right).Should().BeTrue();
-            view.EmptyLibraryAddButton.Classes.Should().NotContain("gamepad-focused");
-            view.EmptyLibraryBrowseButton.Classes.Should().Contain("gamepad-focused");
-            navigation.Confirm().Should().BeTrue();
-            requests.Should().Equal(LibraryActionKind.EmptyLibraryAddApp, LibraryActionKind.EmptyLibraryBrowseCatalog);
+            // The App Catalog is off in Fletch (PlatformCapabilities.HasAppCatalog), so it has no button to reach.
+            view.EmptyLibraryBrowseButton.IsVisible.Should().BeFalse();
+            navigation.Navigate(NavigationDirection.Right);
+            view.EmptyLibraryBrowseButton.Classes.Should().NotContain("gamepad-focused");
+            requests.Should().Equal(LibraryActionKind.EmptyLibraryAddApp);
+            navigation.ApplyLibraryGamepadSelection(0);
             navigation.Navigate(NavigationDirection.Up).Should().BeTrue();
             host.Transitions.Last().Zone.Should().Be(GamepadNavigationZone.TopBar);
             navigation.ApplyLibraryGamepadSelection(0);

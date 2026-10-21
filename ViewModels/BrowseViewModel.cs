@@ -119,7 +119,7 @@ public sealed class BrowseViewModel(QuiverCatalogClient client, Func<IReadOnlyLi
                 ["reason"] = Telemetry.ReasonOf(ex),
                 ["cause"] = Telemetry.CauseOf(ex),
             });
-            Status = $"Couldn't reach quiverlauncher.com. {QuiverCatalogClient.Explain(ex)}";
+            Status = $"Couldn't reach the catalog. {QuiverCatalogClient.Explain(ex)}";
         }
         finally
         {

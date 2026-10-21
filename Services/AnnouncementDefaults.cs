@@ -1,12 +1,10 @@
 namespace QuiverLauncher.Services;
 
 /// <summary>
-/// Remote announcement banner. Edit announcement.json on the Quiver Launcher repo main branch
-/// and push to publish without shipping a Quiver Launcher release. Change <c>id</c> to re-show
-/// the banner for users who dismissed a previous notice.
+/// Remote announcement banner. Upstream read announcement.json from its own repository; Fletch fetches
+/// no upstream content (PLAN D12), so there is no feed and no banner unless a caller passes a URL.
 /// </summary>
 public static class AnnouncementDefaults
 {
-    public const string RemoteUrl =
-        "https://raw.githubusercontent.com/tgeorgiadis/quiver-launcher/main/announcement.json";
+    public static string? RemoteUrl => null;
 }

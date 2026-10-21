@@ -52,7 +52,7 @@ public sealed record ReleaseCheck(
 public sealed class CatalogReleases
 {
     internal const string NotSeen = "Quiver hasn't seen this release yet.";
-    internal const string Unreachable = "Quiver Launcher couldn't reach quiverlauncher.com to check this release.";
+    internal const string Unreachable = "Couldn't reach the app catalog to check this release.";
     private static readonly TimeSpan StatusAge = TimeSpan.FromMinutes(30);
     private static readonly TimeSpan HistoryAge = TimeSpan.FromMinutes(10);
     private static readonly JsonSerializerOptions Json = new(JsonSerializerDefaults.Web);
@@ -78,6 +78,13 @@ public sealed class CatalogReleases
         _client = client;
         _cachePath = Path.Combine(cacheDirectory, "catalog-release-status.json");
         _linksPath = Path.Combine(cacheDirectory, "catalog-release-links.json");
+        // Fletch: with the catalog off, a saved status must not link apps to it either.
+        if (!client.Enabled)
+        {
+            _status = [];
+            _links = new(StringComparer.OrdinalIgnoreCase);
+            return;
+        }
         _status = ReadSaved<List<QuiverCatalogStatus>>(_cachePath) ?? [];
         _links = new(ReadSaved<Dictionary<string, CatalogLink>>(_linksPath) ?? [], StringComparer.OrdinalIgnoreCase);
         if (_status.Count > 0) _statusCheckedAt = File.GetLastWriteTimeUtc(_cachePath);
@@ -87,6 +94,12 @@ public sealed class CatalogReleases
     public async Task RefreshAsync(IEnumerable<GameInfo> apps, CancellationToken token)
     {
         var list = apps.ToList();
+        if (!_client.Enabled)
+        {
+            // No catalog: every app is outside it, and its releases come from its repository.
+            foreach (var app in list) ApplyKnown(app);
+            return;
+        }
         if (!list.Any(a => !a.IsManuallyManaged && !string.IsNullOrWhiteSpace(a.Repository))) return;
         await RefreshStatusAsync(force: false, token).ConfigureAwait(false);
         // Apps sharing a repository are told apart by their download filter, and an app whose repository moved since it
@@ -103,7 +116,7 @@ public sealed class CatalogReleases
     /// </summary>
     private async Task EnsureLinkedAsync(GameInfo app, CancellationToken token)
     {
-        if (app.CatalogSlug == null || !Linkable(app))
+        if (app.CatalogSlug == null || !_client.Enabled || !Linkable(app))
         {
             await RefreshAsync([app], token).ConfigureAwait(false);
             return;

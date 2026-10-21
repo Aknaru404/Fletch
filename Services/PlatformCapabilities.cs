@@ -25,4 +25,10 @@ public static class PlatformCapabilities
     public static bool SupportsModsFolder => !IsMobile;
 
     public static bool SupportsGamepadSdl => !IsMobile;
+
+    /// <summary>
+    /// The upstream App Catalog and community links (website, Discord, Patreon). Off in every Fletch build: it sends
+    /// no data to the upstream author (PLAN D12), so the UI offers no way into them.
+    /// </summary>
+    public static bool HasAppCatalog => false;
 }

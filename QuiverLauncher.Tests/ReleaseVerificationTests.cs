@@ -70,7 +70,7 @@ public class ReleaseVerificationTests
         launcher.Network.SitePaths().Should().HaveCount(4);
 
         // What was read is kept, so a moved app still links offline after a restart.
-        var offline = new CatalogReleases(new QuiverCatalogClient(new HttpClient(new Network())),
+        var offline = new CatalogReleases(new QuiverCatalogClient(new HttpClient(new Network()), CatalogHost),
             Path.Combine(QuiverLauncherPaths.UserDataRoot, "Cache"));
         var movedAgain = App("Moved", "old-owner/old-name");
         offline.ApplyKnown(movedAgain);
@@ -172,6 +172,35 @@ public class ReleaseVerificationTests
         app.InstalledVersion.Should().Be("v1");
         app.LatestVersion.Should().Be(expectedLatest);
         app.Status.Should().Be(expectedStatus);
+    }
+
+    [Fact]
+    public async Task With_the_catalog_off_an_app_linked_to_it_gets_its_releases_from_its_repository()
+    {
+        // Fletch's default: no catalog address, so the catalog is never asked (PLAN D12).
+        using var launcher = new Launcher(catalogBaseUrl: null);
+        var token = TestContext.Current.CancellationToken;
+        var repo = Repo();
+        // What the catalog would say, if anything asked it: the app would then follow it.
+        launcher.Network.Site["/release-status?limit=100"] = Page([Status("alpha", repo, "v1")]);
+        launcher.Network.Site["/apps/alpha/release-history?limit=100"] = Page([History("v1", "verified", [], [(Asset, Zip("v1.txt"))])]);
+        launcher.Network.GitHub[$"/repos/{repo}/releases/latest"] = Json(OnGitHub("v2"));
+        launcher.Network.GitHub[$"/repos/{repo}/releases"] = Json(new[] { OnGitHub("v2"), OnGitHub("v1") });
+        // An app added from the catalog by an earlier launcher still carries its link.
+        var app = App("Alpha", repo, manager: launcher.Manager);
+        app.CatalogEntryId = "id-alpha";
+        app.CatalogSlug = "alpha";
+        app.CatalogVerifiedVersion = "v1";
+
+        var versions = await app.FetchReleasesAsync(launcher.Manager.HttpClient, token);
+        var check = await launcher.Manager.CatalogReleases.CheckAsync(app, "v2", token);
+
+        versions.Releases.Select(r => r.tag_name).Should().Equal("v2", "v1");
+        versions.Provider.Should().NotBe("quiver");
+        check.Should().BeNull("an app outside the catalog isn't checked against it");
+        (app.CatalogSlug, app.CatalogVerifiedVersion).Should().Be((null, null));
+        launcher.Network.SitePaths().Should().BeEmpty();
+        launcher.Network.Requests.Should().Contain(u => u.Host == "api.github.com");
     }
 
     [Fact]
@@ -747,6 +776,9 @@ public class ReleaseVerificationTests
     /// <summary>Where quiverlauncher.com says a release file downloads from.</summary>
     private static string SiteLink(string version, string file) => $"https://files.example/{version}/{file}";
 
+    /// <summary>The stub catalog's address; Fletch's own catalog client has none.</summary>
+    private const string CatalogHost = "https://catalog.test/api/v1";
+
     private sealed class Network : HttpMessageHandler
     {
         /// <summary>quiverlauncher.com answers by path and query after /api/v1; anything else is a 404.</summary>
@@ -832,7 +864,7 @@ public class ReleaseVerificationTests
         public FileSettingsStore Store { get; }
         public GameManager Manager { get; }
 
-        public Launcher()
+        public Launcher(string? catalogBaseUrl = CatalogHost)
         {
             Directory.CreateDirectory(_root);
             QuiverLauncherPaths.OverrideUserDataRoot = _root;
@@ -841,7 +873,7 @@ public class ReleaseVerificationTests
             Store.Current.AppsPath = Path.Combine(_root, "Apps");
             Store.Save(Store.Current);
             SettingsStoreProvider.Default = Store;
-            Manager = new GameManager(Store, new HttpClient(Network), new AppCatalogService(dataDirectory: _root));
+            Manager = new GameManager(Store, new HttpClient(Network), new AppCatalogService(dataDirectory: _root)) { CatalogBaseUrl = catalogBaseUrl };
         }
 
         public void Dispose()

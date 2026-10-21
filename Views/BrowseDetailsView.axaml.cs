@@ -185,7 +185,7 @@ public partial class BrowseDetailsView : UserControl, IFeatureNavigationHandler
             }
             catch (Exception ex) when (!_session.Token.IsCancellationRequested)
             {
-                status = $"Couldn't reach quiverlauncher.com. {ex.Message}";
+                status = $"Couldn't reach the catalog. {ex.Message}";
             }
             if (generation != _gameGeneration || _session.IsClosed) return;
             _game = game;
@@ -402,7 +402,7 @@ public partial class BrowseDetailsView : UserControl, IFeatureNavigationHandler
         if (Model.ReleasesMore)
             BrowseDetailsReleaseList.Children.Add(new TextBlock
             {
-                Text = "Older releases are on the app's page on quiverlauncher.com.", FontSize = 12, Foreground = Brush("ThemeTextSecondary"),
+                Text = "Older releases are on the app's page in the catalog.", FontSize = 12, Foreground = Brush("ThemeTextSecondary"),
             });
     }
 

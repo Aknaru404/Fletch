@@ -658,7 +658,7 @@
 								   Foreground="{DynamicResource ThemeText}"
 								   HorizontalAlignment="Center"
 								   TextAlignment="Center"/>
-						<TextBlock Text="Get started by adding an app yourself, or browse the Quiver catalog to add apps from quiverlauncher.com."
+						<TextBlock Text="Get started by adding an app from its GitHub, GitLab or Codeberg repository."
 								   FontSize="14"
 								   Foreground="{DynamicResource ThemeTextSecondary}"
 								   TextWrapping="Wrap"
@@ -673,7 +673,7 @@
 									FontSize="13"
 									Click="EmptyLibraryAddApp_Click"/>
 							<Button x:Name="EmptyLibraryBrowseButton" Classes="options" Focusable="True" GotFocus="EmptyLibraryAction_GotFocus"
-									IsVisible="{Binding ShowLibraryManagement}"
+									IsVisible="{Binding ShowCatalogBrowse}"
 									Content="Browse App Catalog"
 									FontSize="13"
 									Click="EmptyLibraryBrowseCatalog_Click"/>

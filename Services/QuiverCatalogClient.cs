@@ -1,6 +1,5 @@
 using System.Net;
 using System.Net.Http;
-using System.Runtime.ExceptionServices;
 using System.Text.Json;
 using System.Text.Json.Nodes;
 
@@ -195,24 +194,26 @@ public sealed class QuiverCatalogRelease
 public sealed record QuiverCatalogQuery(string? Search = null, string? Os = null, string? Console = null,
     string? ProjectType = null, string Sort = "added", string? Ai = null);
 
-/// <summary>Reads the public quiverlauncher.com catalog API. Every call is a plain GET.</summary>
+/// <summary>
+/// Reads a catalog API in the upstream format. Every call is a plain GET.
+/// Fletch: the upstream catalog service is not used (PLAN D12). A client made without an address is off: it makes no
+/// request and every read fails with <see cref="DisabledMessage"/>.
+/// </summary>
 public sealed class QuiverCatalogClient(HttpClient http, string? baseUrl = null)
 {
-    public const string DefaultBaseUrl = "https://api.quiverlauncher.com/api/v1";
-    /// <summary>
-    /// The same API on the Convex deployment's own host. api.quiverlauncher.com is a custom domain in front of it, and
-    /// when that domain's TLS handshake fails for a player the deployment's host still answers.
-    /// </summary>
-    public const string FallbackBaseUrl = "https://famous-wildebeest-660.convex.site/api/v1";
-    public const string WebsiteUrl = "https://quiverlauncher.com";
+    public const string DisabledMessage = "The app catalog isn't available in this build.";
+    /// <summary>The catalog's website; none in Fletch.</summary>
+    public static string? WebsiteUrl => null;
     public const int PageSize = 48;
     private static readonly TimeSpan Timeout = TimeSpan.FromSeconds(20);
     private static readonly JsonSerializerOptions Json = new(JsonSerializerDefaults.Web);
-    private readonly string _base = (baseUrl ?? Environment.GetEnvironmentVariable("QUIVER_API") ?? DefaultBaseUrl).TrimEnd('/');
-    private bool _usingFallback;
+    private readonly string? _base = string.IsNullOrWhiteSpace(baseUrl) ? null : baseUrl.TrimEnd('/');
 
-    public static string AppPageUrl(string slug) => $"{WebsiteUrl}/apps/{Uri.EscapeDataString(slug)}";
-    public static string ReviewPageUrl(string slug) => AppPageUrl(slug) + "?tab=how-it-runs";
+    /// <summary>False when the client has no catalog address, so it never makes a request.</summary>
+    public bool Enabled => _base != null;
+
+    public static string? AppPageUrl(string slug) => WebsiteUrl is { } site ? $"{site}/apps/{Uri.EscapeDataString(slug)}" : null;
+    public static string? ReviewPageUrl(string slug) => AppPageUrl(slug) is { } page ? page + "?tab=how-it-runs" : null;
 
     /// <summary>The most apps the API returns in one page.</summary>
     public const int MaxPageSize = 100;
@@ -269,6 +270,7 @@ public sealed class QuiverCatalogClient(HttpClient http, string? baseUrl = null)
     /// </summary>
     public async Task ReportDownloadProblemAsync(string slug, string version, string fileName, string problem, CancellationToken token)
     {
+        if (_base is null) return;
         using var timeout = CancellationTokenSource.CreateLinkedTokenSource(token);
         timeout.CancelAfter(Timeout);
         try
@@ -276,7 +278,7 @@ public sealed class QuiverCatalogClient(HttpClient http, string? baseUrl = null)
             var body = JsonSerializer.Serialize(new { version, file = fileName, problem });
             using var content = new StringContent(body, System.Text.Encoding.UTF8, "application/json");
             using var response = await http.PostAsync(
-                (_usingFallback ? FallbackBaseUrl : _base) + $"/apps/{Uri.EscapeDataString(slug)}/download-problem",
+                _base + $"/apps/{Uri.EscapeDataString(slug)}/download-problem",
                 content, timeout.Token).ConfigureAwait(false);
         }
         catch (Exception ex) when (ex is HttpRequestException or OperationCanceledException or TimeoutException)
@@ -294,44 +296,11 @@ public sealed class QuiverCatalogClient(HttpClient http, string? baseUrl = null)
         return new(items, done ? null : next, done || next == null);
     }
 
-    /// <summary>
-    /// Returns null for a 404; any other failure throws with the site's own message. When api.quiverlauncher.com can't
-    /// be reached at all (a failed TLS handshake or connection, or the 499 its proxy sometimes answers), asks the
-    /// deployment's own host instead, and keeps asking it from then on.
-    /// </summary>
-    private async Task<T?> GetAsync<T>(string path, CancellationToken token) where T : class
-    {
-        if (_usingFallback) return await GetAsync<T>(FallbackBaseUrl, path, token).ConfigureAwait(false);
-        try
-        {
-            return await GetAsync<T>(_base, path, token).ConfigureAwait(false);
-        }
-        catch (HttpRequestException ex) when (_base == DefaultBaseUrl && Unreachable(ex) && !token.IsCancellationRequested)
-        {
-            T? answer = null;
-            var failed = false;
-            try
-            {
-                answer = await GetAsync<T>(FallbackBaseUrl, path, token).ConfigureAwait(false);
-            }
-            catch (Exception fallback) when (fallback is HttpRequestException or TimeoutException or JsonException)
-            {
-                failed = true;
-            }
-            // The player's real problem is the first one; say that.
-            if (failed) ExceptionDispatchInfo.Throw(ex);
-            _usingFallback = true;
-            Telemetry.Current.Track("catalog_fallback_used", new Dictionary<string, object?>
-            {
-                ["reason"] = Telemetry.ReasonOf(ex),
-                ["cause"] = Telemetry.CauseOf(ex),
-            });
-            return answer;
-        }
-    }
-
-    /// <summary>The request never got a real answer: no status at all, or the proxy's 499.</summary>
-    private static bool Unreachable(HttpRequestException ex) => ex.StatusCode is null || (int)ex.StatusCode == 499;
+    /// <summary>Returns null for a 404; any other failure throws with the site's own message.</summary>
+    private Task<T?> GetAsync<T>(string path, CancellationToken token) where T : class =>
+        _base is { } baseUrl
+            ? GetAsync<T>(baseUrl, path, token)
+            : Task.FromException<T?>(new HttpRequestException(DisabledMessage));
 
     /// <summary>What went wrong, in words: the wrapped cause when the message only says to look at it.</summary>
     public static string Explain(Exception ex)
@@ -354,12 +323,12 @@ public sealed class QuiverCatalogClient(HttpClient http, string? baseUrl = null)
             if (response.StatusCode == HttpStatusCode.NotFound) return null;
             var body = await response.Content.ReadAsStringAsync(timeout.Token).ConfigureAwait(false);
             if (!response.IsSuccessStatusCode)
-                throw new HttpRequestException(ErrorMessage(body) ?? $"quiverlauncher.com answered {(int)response.StatusCode}.", null, response.StatusCode);
+                throw new HttpRequestException(ErrorMessage(body) ?? $"The catalog answered {(int)response.StatusCode}.", null, response.StatusCode);
             return JsonSerializer.Deserialize<T>(body, Json);
         }
         catch (OperationCanceledException) when (!token.IsCancellationRequested)
         {
-            throw new TimeoutException("quiverlauncher.com took too long to answer.");
+            throw new TimeoutException("The catalog took too long to answer.");
         }
     }
 

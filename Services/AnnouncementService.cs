@@ -63,6 +63,8 @@ public static class AnnouncementService
         CancellationToken cancellationToken = default)
     {
         var target = string.IsNullOrWhiteSpace(url) ? AnnouncementDefaults.RemoteUrl : url;
+        if (string.IsNullOrWhiteSpace(target))
+            return null;
         try
         {
             using var response = await httpClient

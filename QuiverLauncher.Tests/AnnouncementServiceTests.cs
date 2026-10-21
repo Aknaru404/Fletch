@@ -74,6 +74,27 @@ public class AnnouncementServiceTests
     }
 
     [Fact]
+    public async Task Default_configuration_fetches_nothing()
+    {
+        var requests = 0;
+        using var handler = new StubHttpMessageHandler(_ =>
+        {
+            requests++;
+            return new HttpResponseMessage(HttpStatusCode.OK)
+            {
+                Content = new StringContent("""{"id":"remote-1","enabled":true,"message":"Remote hello"}"""),
+            };
+        });
+        using var client = new HttpClient(handler);
+
+        AnnouncementDefaults.RemoteUrl.Should().BeNull();
+        var payload = await AnnouncementService.TryFetchAsync(client, cancellationToken: TestContext.Current.CancellationToken);
+
+        payload.Should().BeNull();
+        requests.Should().Be(0);
+    }
+
+    [Fact]
     public async Task TryFetchAsync_returns_null_on_http_failure()
     {
         using var handler = new StubHttpMessageHandler(_ =>

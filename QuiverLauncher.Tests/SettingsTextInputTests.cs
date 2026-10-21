@@ -308,21 +308,20 @@ public class SettingsTextInputTests
             GamepadFocusChrome.SetKeyboardNavigationActive(true);
             if (gamepad)
             {
+                // The App Catalog is off in Fletch, so adding an app is the only action.
+                library.EmptyLibraryBrowseButton.IsVisible.Should().BeFalse();
                 ((IFeatureNavigationHost)view).ApplyTransition(new(GamepadNavigationZone.Library, 0));
-                library.Navigation.Navigate(QuiverLauncher.Services.NavigationDirection.Right).Should().BeTrue();
-                library.EmptyLibraryBrowseButton.Classes.Should().Contain("gamepad-focused");
+                library.EmptyLibraryAddButton.Classes.Should().Contain("gamepad-focused");
                 library.Navigation.Navigate(QuiverLauncher.Services.NavigationDirection.Up).Should().BeTrue();
                 library.EmptyLibraryAddButton.Classes.Should().NotContain("gamepad-focused");
-                library.EmptyLibraryBrowseButton.Classes.Should().NotContain("gamepad-focused");
                 ((IFeatureNavigationHost)view).ApplyTransition(new(GamepadNavigationZone.Library, 0));
                 library.Navigation.Navigate(QuiverLauncher.Services.NavigationDirection.Left).Should().BeTrue();
                 library.EmptyLibraryAddButton.Classes.Should().NotContain("gamepad-focused");
-                library.EmptyLibraryBrowseButton.Classes.Should().NotContain("gamepad-focused");
-                ((IFeatureNavigationHost)view).ApplyTransition(new(GamepadNavigationZone.Library, 1));
-                library.EmptyLibraryBrowseButton.Classes.Should().Contain("gamepad-focused");
+                ((IFeatureNavigationHost)view).ApplyTransition(new(GamepadNavigationZone.Library, 0));
                 library.Navigation.Confirm().Should().BeTrue();
                 Dispatcher.UIThread.RunJobs();
-                view.Shell.Mode.Should().Be(MainViewMode.Browse);
+                view.Shell.EntryEditorOpen.Should().BeTrue();
+                view.Shell.Mode.Should().NotBe(MainViewMode.Browse);
             }
             else
             {
