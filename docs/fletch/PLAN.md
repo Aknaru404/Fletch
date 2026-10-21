@@ -101,3 +101,4 @@ None. Q1 to Q4 decided on 2026-10-21 as D8 to D11.
 | R5 | iOS suspends long downloads in the background | Medium | Medium | Resume-safe downloads; clear failure state (M4) |
 | R6 | GitHub API rate limits without a token | Medium | Low | Existing cache files; optional personal token setting |
 | R7 | GitHub macOS runner capacity delays or cancels iOS jobs | Occurred (M1: arm64 runners not acquired 3 times) | Medium | Intel `macos-26-intel` runner; one macOS job per push; `workflow_dispatch` re-run; no macOS work on upstream jobs |
+| R8 | An upstream Linux test fails intermittently (once in the first local baseline run, once in CI on 550953d) | Medium | Low | Re-run once; capture the test name from G1 TRX output when it recurs; fix or report upstream |
