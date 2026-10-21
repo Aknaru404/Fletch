@@ -5,6 +5,8 @@ on:
   push:
     branches: [ "main", "claude/**" ]
     tags: [ "fletch-v*" ]
+    # A run takes about an hour on the Intel runner; skip pushes that cannot change the app.
+    paths-ignore: [ "docs/**", "**/*.md", ".claude/**", "scripts/harness/**" ]
   workflow_dispatch:
 
 permissions:
