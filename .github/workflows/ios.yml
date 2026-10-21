@@ -16,7 +16,6 @@ concurrency:
 
 env:
   BUNDLE_ID: io.github.aknaru404.fletch
-  PROJECT: Fletch.iOS/Fletch.iOS.csproj
   DOTNET_CLI_TELEMETRY_OPTOUT: "1"
   DOTNET_NOLOGO: "1"
 
@@ -49,7 +48,7 @@ jobs:
         dotnet workload list
 
     - name: Build device app (unsigned)
-      run: dotnet build "$PROJECT" -c Release -r ios-arm64 -p:EnableCodeSigning=false
+      run: scripts/ci/ios-build.sh ios-arm64 -p:EnableCodeSigning=false
 
     - name: Package and check IPA
       run: |
@@ -60,13 +59,13 @@ jobs:
         [ -x "$app/Fletch" ] || { echo "::error::app executable missing"; exit 1; }
         [ ! -e "$app/embedded.mobileprovision" ] || { echo "::error::IPA must be unsigned"; exit 1; }
         version="$(plutil -extract CFBundleShortVersionString raw "$app/Info.plist")"
-        mkdir -p artifacts staging/Payload
+        mkdir -p staging/Payload
         cp -R "$app" staging/Payload/
         (cd staging && zip -qry "../artifacts/Fletch-${version}-${GITHUB_SHA::7}-unsigned.ipa" Payload)
         ls -l artifacts
 
     - name: Build simulator app
-      run: dotnet build "$PROJECT" -c Release -r iossimulator-arm64
+      run: scripts/ci/ios-build.sh iossimulator-arm64
 
     - name: Simulator smoke test (iPhone and iPad)
       run: |
