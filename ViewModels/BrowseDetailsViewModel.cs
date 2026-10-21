@@ -141,7 +141,7 @@ public sealed class BrowseDetailsViewModel(QuiverCatalogClient client, Func<Quiv
         }
         catch (Exception ex) when (!token.IsCancellationRequested)
         {
-            if (generation == _generation) Error = $"Couldn't load this app from quiverlauncher.com, so it can't be added right now. {ex.Message}";
+            if (generation == _generation) Error = $"Couldn't load this app from the catalog, so it can't be added right now. {ex.Message}";
         }
     }
 

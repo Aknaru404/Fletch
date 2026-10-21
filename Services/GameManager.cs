@@ -52,7 +52,11 @@ namespace QuiverLauncher.Services
         public HttpClient HttpClient => _httpClient;
         public AppCatalogService CatalogService => _catalogService;
         /// <summary>Which library apps are in the quiverlauncher.com catalog, and which of their releases Quiver verified.</summary>
-        public CatalogReleases CatalogReleases => _catalogReleases ??= new CatalogReleases(new QuiverCatalogClient(_httpClient), _cacheFolder);
+        public CatalogReleases CatalogReleases => _catalogReleases ??= new CatalogReleases(new QuiverCatalogClient(_httpClient, CatalogBaseUrl), _cacheFolder);
+        /// <summary>
+        /// The catalog API address. Null in Fletch, which leaves the catalog off (PLAN D12); tests set a stub host.
+        /// </summary>
+        public string? CatalogBaseUrl { get; init; }
         private CatalogReleases? _catalogReleases;
         public ModProviderRegistry ModProviderRegistry => _modProviderRegistry;
         public string AppsFolder => _appsFolder;

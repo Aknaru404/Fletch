@@ -250,7 +250,7 @@ public partial class SettingsView : UserControl
         if (DataFolderPanel == null) return;
         DataFolderPanel.IsVisible = QuiverLauncherPaths.CanMoveDataToUserFolder;
         if (!DataFolderPanel.IsVisible) return;
-        DataFolderText.Text = $"Settings, your library and Quiver's cache are kept next to the app in {DisplayPath(QuiverLauncherPaths.UserDataRoot)}.";
+        DataFolderText.Text = $"Settings, your library and Fletch's cache are kept next to the app in {DisplayPath(QuiverLauncherPaths.UserDataRoot)}.";
         MoveDataFolderButton.Content = $"Move to {DisplayPath(QuiverLauncherPaths.UserFolderDataRoot)}";
     }
 
@@ -271,7 +271,7 @@ public partial class SettingsView : UserControl
             var appsFolder = _gameManager.GamesFolder;
             var target = DisplayPath(QuiverLauncherPaths.UserFolderDataRoot);
             if (!await _host.ShowMessageBoxAsync(
-                    $"Quiver will close and move its settings, library and cache to {target}. They move when you next open it.\n\n" +
+                    $"Fletch will close and move its settings, library and cache to {target}. They move when you next open it.\n\n" +
                     $"Installed apps stay in {DisplayPath(appsFolder)}.", "Move Data Folder", true) || _session.IsClosed)
                 return;
             try

@@ -9,7 +9,7 @@
 			<category android:name="android.intent.category.LAUNCHER" />
 		</intent>
 	</queries>
-	<application android:name="com.quiverlauncher.app.AndroidApp" android:label="Quiver Launcher" android:icon="@mipmap/ic_launcher" android:roundIcon="@mipmap/ic_launcher_round" android:requestLegacyExternalStorage="false">
+	<application android:name="com.quiverlauncher.app.AndroidApp" android:label="Fletch" android:icon="@mipmap/ic_launcher" android:roundIcon="@mipmap/ic_launcher_round" android:requestLegacyExternalStorage="false">
 		<provider
 			android:name="androidx.core.content.FileProvider"
 			android:authorities="${applicationId}.fileprovider"

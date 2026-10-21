@@ -83,7 +83,7 @@ public sealed class AvaloniaGameDownloadDialogs : IGameDownloadDialogs
 
     public Task<bool> OfferOtherReleaseAsync(string appName, string problem, string version) =>
         GameDialogService.ShowQuestionAsync(
-            $"{problem}\n\nInstall {version} of {appName} instead? It's the newest version Quiver verified.", "Download Removed");
+            $"{problem}\n\nInstall {version} of {appName} instead? It's the newest version the catalog verified.", "Download Removed");
 
     public Task<bool> AcceptLicenseAsync(string appName, string fileName, string license) =>
         GameDialogService.ShowQuestionAsync(

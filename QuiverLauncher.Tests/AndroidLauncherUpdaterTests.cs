@@ -21,7 +21,7 @@ public class AndroidLauncherUpdaterTests : IDisposable
     {
         tag_name = version, prerelease = preview, draft,
         assets = apk ? new[] { new { name = "QuiverLauncher-android.apk", size = 3,
-            browser_download_url = url ?? $"https://github.com/tgeorgiadis/quiver-launcher/releases/download/{version}/QuiverLauncher-android.apk" } } : []
+            browser_download_url = url ?? $"https://github.com/Aknaru404/Fletch/releases/download/{version}/QuiverLauncher-android.apk" } } : []
     };
     private static HttpResponseMessage Releases(params object[] releases)
     {
@@ -50,9 +50,10 @@ public class AndroidLauncherUpdaterTests : IDisposable
         AndroidLauncherUpdater.SelectRelease(json, "3.3.4", true)!.Version.Should().Be("v3.5.0-beta.1");
     }
     [Theory]
-    [InlineData("http://github.com/tgeorgiadis/quiver-launcher/releases/download/v3.4.0/QuiverLauncher-android.apk")]
+    [InlineData("http://github.com/Aknaru404/Fletch/releases/download/v3.4.0/QuiverLauncher-android.apk")]
     [InlineData("https://example.com/QuiverLauncher-android.apk")]
     [InlineData("https://github.com/another/repo/releases/download/v3.4.0/QuiverLauncher-android.apk")]
+    [InlineData("https://github.com/tgeorgiadis/quiver-launcher/releases/download/v3.4.0/QuiverLauncher-android.apk")]
     public void Unsupported_download_sources_are_not_offered(string url) =>
         AndroidLauncherUpdater.SelectRelease(JsonSerializer.Serialize(new[] { Release(url: url) }), "3.3.4", false).Should().BeNull();
 

@@ -11,7 +11,7 @@ namespace QuiverLauncher.Services;
 /// </summary>
 public sealed class VelopackUpdateService
 {
-    public const string GitHubRepoUrl = "https://github.com/tgeorgiadis/quiver-launcher";
+    public static string GitHubRepoUrl => $"https://github.com/{QuiverLauncherProfile.Instance.Repository}";
 
     private UpdateInfo? _lastUpdateInfo;
     private bool _lastIncludePrerelease;

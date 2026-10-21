@@ -46,7 +46,7 @@ public static class LauncherIconCache
         if (uri.Host.Equals("github.com", StringComparison.OrdinalIgnoreCase) && uri.AbsolutePath.Contains("/blob/"))
             uri = new Uri("https://raw.githubusercontent.com" + uri.AbsolutePath.Replace("/blob/", "/"));
         using var request = new HttpRequestMessage(HttpMethod.Get, uri);
-        request.Headers.UserAgent.ParseAdd("Quiver-Launcher/1.0");
+        request.Headers.UserAgent.ParseAdd(QuiverLauncherProfile.Instance.UserAgent);
         request.Headers.Accept.ParseAdd("image/webp,image/*;q=0.8");
         if (!string.IsNullOrWhiteSpace(token) && uri.Scheme == "https" &&
             (uri.Host.Equals("api.github.com", StringComparison.OrdinalIgnoreCase) ||

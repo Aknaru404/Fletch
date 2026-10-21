@@ -35,6 +35,11 @@ Out of scope: launching downloaded apps, installing packages from inside the app
 | D9 | Generated fletching-mark icon, replaceable later | Owner, 2026-10-21 |
 | D10 | Fletch checks its own GitHub releases and shows a notice with a link; no self-update | Owner, 2026-10-21 |
 | D11 | Desktop and Android heads keep building and testing; not released from the fork | Owner, 2026-10-21 |
+| D12 | Upstream services are disabled at the source (hosts blanked, catalog entry points hidden), not deleted, to keep the upstream diff small | Owner, 2026-10-21 |
+| D13 | M2 rebrands identifiers and all text reachable on iOS; Desktop/Android-only text (tray, Mac menu, CLI, Windows installer, Flatpak, Android updater) stays as upstream | Owner, 2026-10-21 |
+| D14 | The Fletch "new version available" notice moves to M8, when a release exists to detect; M2 only points update sources at Aknaru404/Fletch | Owner, 2026-10-21 |
+| D15 | The fallback data folder is renamed to `Fletch` (macOS/XDG) with no migration from `QuiverLauncher`; Fletch is not released for desktop, and iOS keeps its data in Documents | G2 M2 T2.1-A1, 2026-10-21 |
+| D16 | With the catalog off, the user's own "My app list" (CustomAppListLocation) is hidden with Browse; the saved value is kept. The catalog fallback host code was deleted rather than disabled because G-UPSTREAM forbids the host literal. The Steam shortcut tag rename may duplicate old desktop shortcuts (desktop not released). | G3 M2 C2, S5, C3, 2026-10-21 |
 
 ## 3. Architecture
 
@@ -71,13 +76,13 @@ Status: Draft, Approved, In progress, Done. App code starts only for a task unde
 |---|---|---|---|---|
 | M0 Harness | T0.1 `CLAUDE.md`, agents, gate scripts, SessionStart hook. T0.2 This plan. T0.3 Baseline: Linux suite 1,789 passed, 3 root-only failures tolerated. T0.4 Fork CI: upstream Windows, macOS and Flatpak packaging run only on manual dispatch (moved from T1.3; macOS runner capacity cancelled PR 1). | G1, owner review | No | Approved |
 | M1 Toolchain spike | T1.1 Empty `Fletch.iOS` head showing the existing `MainView`. T1.2 `ios.yml` producing an unsigned IPA and simulator screenshots. T1.3 (moved to T0.4). T1.4 Owner installs via Signulous and confirms launch (Pass, FLETCH-G5-M1-01). T1.5 `Info.plist` file-sharing keys added early (from T5.3) so `crash.log` in Documents can be fetched from Files during G5. | G1 to G5 | Yes (launch only) | Done pending merge (G1 to G5 Pass) |
-| M2 Identity and upstream services | T2.1 Fletch identifiers and icon; `LSSupportsGameMode` false (G5 M1-O3). T2.2 Remove telemetry. T2.3 Remove catalog and announcements, hide the catalog UI. T2.4 Update checks point to Aknaru404/Fletch releases (notify only). | G1 to G4 | No | Draft |
-| M3 Platform layer | T3.1 Capability flags and call-site audit. T3.2 iOS paths: caches (`Cache/`, artwork) under `Library/Caches` with a size cap, library under Documents (G2 M1-A2, G3 M1-AP5); document or replace the `OverrideUserDataRoot` test seam used by the iOS head (G3 M1-S1); keep identity in the csproj only and drop duplicate Info.plist keys (G3 M1-S2). T3.3 `TargetOS.iOS` and asset selection. T3.5 iOS `IAppInstallLaunchService` so Launch and Install never reach the desktop `Process.Start` path (G2 M1-A7). T3.4 Disable Wine, Steam shortcuts, tray, gamepad and Velopack on iOS through the flags. | G1 to G4 | No | Draft |
+| M2 Identity and upstream services | T2.1 Identity: profile values, data folder name, user agents, update sources (Velopack, CLI, Android updater) to Aknaru404/Fletch, `LSSupportsGameMode` false (G5 M1-O3). T2.2 Telemetry inert: no build-time or env token, no PostHog host. T2.3 Catalog, announcements and artwork resizer disabled at source; catalog, Discord, Patreon and upstream repo entry points hidden or repointed. T2.5 Rebrand text reachable on iOS (D13). | G1 to G5 | Yes (identity and no upstream calls) | G1 to G3 Pass; G4 and G5 pending |
+| M3 Platform layer | T3.0 Harden the brand scan from G2 M2-fixes: allow-list only `App.axaml.cs` tray strings rather than the whole file (also `GameLaunchService.cs`, `GameDialogService.cs`), require XAML exemptions to sit under `IsDesktopPlatform`, and restore the null-safe `WebsiteUrl` guard in `MainView.axaml.cs`. T3.1 Capability flags and call-site audit. T3.2 iOS paths: caches (`Cache/`, artwork) under `Library/Caches` with a size cap (the artwork disk cache has no eviction and now stores full-size originals), library under Documents (G2 M1-A2, G3 M1-AP5, G3 M2-AP3); document or replace the `OverrideUserDataRoot` test seam used by the iOS head (G3 M1-S1); keep identity in the csproj only and drop duplicate Info.plist keys (G3 M1-S2). T3.3 `TargetOS.iOS` and asset selection. T3.5 iOS `IAppInstallLaunchService` so Launch and Install never reach the desktop `Process.Start` path (G2 M1-A7). T3.4 Disable Wine, Steam shortcuts, tray, gamepad and Velopack on iOS through the flags. | G1 to G4 | No | Draft |
 | M4 IPA hand-off | T4.1 Download to `Documents/Downloads` with progress and cancel. T4.2 Share sheet hand-off. T4.3 Library states: Not downloaded, Downloaded, Update available. T4.4 Delete downloaded file. | G1 to G5 | Yes | Draft |
 | M5 Mods to Files | T5.1 Thunderstore and GameBanana downloads to `Documents/Mods/<game>/`. T5.2 Hide install-into-game actions on iOS. T5.3 `Info.plist` file sharing keys (done early in T1.5). | G1 to G5 | Yes | Draft |
-| M6 iPhone and iPad UI | T6.1 Safe areas and keyboard insets. T6.2 iPad regular-width layout, Split View and Stage Manager; add `UIApplicationSceneManifest` scene support (G3 M1-P1). T6.3 Touch targets and edge-swipe review. T6.4 Dark and light themes. | G1 to G5 | Yes | Draft |
-| M7 AOT and performance | T7.0 Remove `JsonSerializerIsReflectionEnabledByDefault=true` from the iOS head once T7.1 lands (G3 M1-AP1). T7.1 Source-generated JSON for all persisted types. T7.2 Compiled bindings on iOS views. T7.3 Clear trimmer warnings; consider `TrimMode=full`. T7.4 Measure startup and IPA size. | G1 to G4 | No | Draft |
-| M8 Release | T8.1 `fletch-v1.0.0` tag and GitHub Release. T8.2 Full device checklist on iPhone and iPad. T8.3 README section for Fletch. | G1 to G5 | Yes (full) | Draft |
+| M6 iPhone and iPad UI | T6.1 Safe areas and keyboard insets. T6.2 iPad regular-width layout, Split View and Stage Manager; add `UIApplicationSceneManifest` scene support (G3 M1-P1). T6.3 Touch targets and edge-swipe review. T6.4 Dark and light themes. T6.5 Hide or reword Settings text that promises a tray or self-updater on iOS (G2 M2-F3). | G1 to G5 | Yes | Draft |
+| M7 AOT and performance | T7.0 Remove `JsonSerializerIsReflectionEnabledByDefault=true` from the iOS head once T7.1 lands (G3 M1-AP1). T7.1 Source-generated JSON for all persisted types. T7.2 Compiled bindings on iOS views. T7.3 Clear trimmer warnings; consider `TrimMode=full`. T7.4 Measure startup and IPA size. T7.5 Decode artwork to display size (`Bitmap.DecodeToWidth`) instead of decoding full-size originals (G3 M2-AP1, AP2). | G1 to G4 | No | Draft |
+| M8 Release | T8.0 Fletch "new version available" notice on iOS against Aknaru404/Fletch releases (moved from T2.4, D14). T8.1 `fletch-v1.0.0` tag and GitHub Release. T8.2 Full device checklist on iPhone and iPad. T8.3 README section for Fletch. | G1 to G5 | Yes (full) | Draft |
 
 ## 6. Definition of done
 
@@ -102,3 +107,98 @@ None. Q1 to Q4 decided on 2026-10-21 as D8 to D11.
 | R6 | GitHub API rate limits without a token | Medium | Low | Existing cache files; optional personal token setting |
 | R7 | GitHub macOS runner capacity delays or cancels iOS jobs | Occurred (M1: arm64 runners not acquired 3 times) | Medium | Intel `macos-26-intel` runner; one macOS job per push; `workflow_dispatch` re-run; no macOS work on upstream jobs |
 | R8 | An upstream Linux test fails intermittently (once in the first local baseline run, once in CI on 550953d) | Medium | Low | Re-run once; capture the test name from G1 TRX output when it recurs; fix or report upstream |
+
+## 9. Ideas to explore (no decision, not planned)
+
+| Ref | Idea | Notes |
+|---|---|---|
+| X1 | One-tap JIT for apps that need it (emulators): Fletch "Launch with JIT" hands the bundle ID to StikDebug via its URL scheme | JIT cannot be enabled permanently on iOS: a debugger must attach on each launch. Needs StikDebug installed, a one-time pairing file made on a computer, and a `get-task-allow` signature from Signulous. Not needed for natively compiled engines. Recorded 2026-10-21 at the owner's request; no decision. |
+| X2 | Per-game iOS builds of open-source engines (for example dhewm3, OpenJK, Arx Libertatis, OpenMW) as separate apps, rendered through Metal (ANGLE or MoltenVK), tracked and delivered through Fletch | Each game becomes its own IPA. The owner supplies legitimately owned game data through Files. Console static recompilations are research only. Device limits: about 4 GB RAM and little free storage. Recorded 2026-10-21; no decision. |
+
+### X2 estimates (owner's game list, 2026-10-21; ideas only)
+
+Assumptions: iPad Pro 11-inch (2018, A12X, 4 GB RAM), owner-supplied game data, GitHub Actions macOS minutes free. Cost is Claude usage, scaled from this programme's M0 and M1 (about $10 to $15 metered).
+
+| Title | Route | Expected performance | Time to tested IPA | Cost (tokens / money) |
+|---|---|---|---|---|
+| Diablo + Hellfire | DevilutionX (already targets iOS) | Excellent, 60 fps | 0.5 to 1 day | ~3–8M / $5–15 |
+| Fallout 1, Fallout 2 | fallout1-ce, fallout2-ce (already target iOS) | Excellent, 60 fps | 0.5 to 1 day each | ~3–8M / $5–15 each |
+| Baldur's Gate 1/2, Icewind Dale, Planescape: Torment | GemRB (iOS support), or buy official Enhanced Editions | Excellent | 1 to 2 days (0 if bought) | ~8–20M / $10–30 |
+| TES II: Daggerfall | Daggerfall Unity (Unity Editor in CI) | Good, 60 fps | 1 to 2 weeks | ~30–80M / $40–120 |
+| TES III: Morrowind | OpenMW (OSG, Bullet, MyGUI, FFmpeg, Lua without JIT) | Good, 30 to 60 fps, reduced view distance | 1 to 3 weeks | ~40–120M / $60–200 |
+| Arx Fatalis | Arx Libertatis via ANGLE to Metal | Good, 60 fps | 3 to 7 days | ~20–50M / $30–80 |
+| KOTOR 1/2 | Official iOS apps (open engine incomplete) | Excellent | none | $0 |
+| Fallout 3/NV/4, Oblivion, Skyrim, Diablo II/III, Assassin's Creed, God of War (PS2), Guild Wars 1/2, Xbox 360 RPGs | Not possible: closed engines with no open reimplementation, online-only, or no recompilation; 360 titles exceed 4 GB RAM | n/a | n/a | n/a |
+
+Constraints: about 4.2 GB free storage on the device; Morrowind data with expansions is about 1.2 GB.
+
+### X3 Xbox 360 recompilation basis (2026-10-21; ideas only, no decision)
+
+| Stage | What | Purpose | Rough effort |
+|---|---|---|---|
+| A | Port an existing 360 recompilation (UnleashedRecomp, built on XenonRecomp) to iPadOS: ARM64 in place of x64 vector code, Metal backend, iOS packaging | Builds a reusable iOS runtime and Metal layer on a project known to work | Weeks to a few months; about $300 to $1,500; medium risk |
+| B | Generalise Stage A into a 360-to-iOS toolkit | Shared basis for later titles | Weeks; about $200 to $800 |
+| C | Assassin's Creed 1 from the owner's own dump on that toolkit | First-of-its-kind recompilation | Months; several thousand dollars; high risk of an incomplete result |
+
+- The instruction set and translator are the same for every game. The per-game work is code analysis, statically linked middleware, GPU usage, timing and threading.
+- The A12X (CPU, GPU, 4 GB RAM) is not the limiting factor for native recompiled code. The engineering effort is.
+- Stage C needs a Mac with Xcode for debugging.
+- Public/private split, as UnleashedRecomp and Zelda 64: Recompiled do: the recompiler toolkit, iOS runtime, Metal renderer and the game's patches and configuration can be public, with free macOS CI, because they contain no game code. The owner's dump, the code generated from it and the resulting IPA stay private (private repository with private CI, or a Mac) and are for personal sideloading only, because public CI artifacts would distribute translated game code. Only that private build step needs paid macOS minutes.
+- Decrypting a console executable sits in a legal grey area, including in the UK.
+- Oblivion (360) and Assassin's Creed (360) have no existing recompilation project. REA (morluto/rea) can help only with binary analysis; it does not recompile.
+
+### X2 and X3: how game files are supplied, and legal notes (2026-10-21; ideas only, not legal advice)
+
+| Kind | IPA contains | Owner supplies through Files at first launch |
+|---|---|---|
+| Engine rebuild (X2: OpenMW, DevilutionX, fallout2-ce, Daggerfall Unity) | Only the open-source engine; no game code | All game data from a legitimately owned copy |
+| Static recompilation (X3: UnleashedRecomp model, any 360 title) | The runtime plus the game's program code, translated to ARM64 at build time from the owner's dump (iOS forbids generating native code on device) | Game assets only (textures, audio, levels) |
+
+- Engine rebuilds with owned copies are the low-risk route.
+- UK: there is no private-copying exception (the 2014 exception was quashed by the High Court in 2015), so dumping an owned disc is technically outside an exception, although personal use is not pursued in practice.
+- Decrypting a console executable engages the anti-circumvention provisions (CDPA s.296ZA onwards); the decompilation exception (s.50B) is narrow, for interoperability.
+- A recompiled IPA contains derived game code: keep it for personal sideloading only and never publish it. Sharing it is where takedowns happen.
+- Sideloading one's own build to one's own device through Signulous is within normal developer signing use.
+
+### X3 alternative: Assassin's Creed via the GOG PC version (2026-10-21; ideas only)
+
+| Aspect | Xbox 360 dump | GOG PC version (Assassin's Creed: Director's Cut, DRM-free, Windows) |
+|---|---|---|
+| Legal | Decrypting the console executable engages UK anti-circumvention provisions | DRM-free, so there is no protection to circumvent; no disc dump needed |
+| Code to translate | PowerPC (Xbox 360), handled by XenonRecomp | x86 Windows; static recompilation tools from x86 to ARM64 are far less mature |
+| Graphics | Xbox 360 GPU to Metal | DirectX 9/10 to Metal (DXVK or wined3d with MoltenVK) |
+| Run unmodified on iPad | n/a | Not possible: box64, FEX and Wine all need JIT |
+
+The GOG route removes the legal issue and makes supplying assets through Files simple, but the code-translation work is at least as hard as the 360 route. Research-scale only. GOG users report launch problems on modern Windows; check the GOG support page before buying.
+
+### X4 Emulators and streaming on the owner's iPad, for reference (2026-10-21; ideas only)
+
+| Platform | iOS emulator | On iPad Pro 11-inch (2018) |
+|---|---|---|
+| PS1, N64, NDS, GBA and older | Delta, RetroArch, Gamma, Provenance (App Store, no JIT needed) | Full speed |
+| PSP | PPSSPP (App Store interpreter; JIT when sideloaded) | Most games full speed |
+| GameCube, Wii | DolphiniOS (sideloaded, needs JIT) | Many games playable with JIT |
+| PS2 (God of War 1/2) | Play! (App Store interpreter; JIT when sideloaded) | God of War will not hold full speed |
+| Xbox 360, original Xbox | None on iOS (Xenia and xemu are desktop only) | Not possible |
+| Windows XP-era PC games | UTM (JIT when sideloaded) or UTM SE (no JIT) | Unusable for 3D games; no 3D acceleration for Windows guests |
+
+| Practical route | Covers | Notes |
+|---|---|---|
+| Engine rebuilds (X2) | Morrowind, Daggerfall, Fallout 1/2, Diablo, Infinity Engine games | Native speed, no JIT |
+| Streaming from own PC (Moonlight, Steam Link) | Anything the PC runs, including Assassin's Creed (GOG) | Needs a gaming-capable Windows PC on the network; the only working route for Assassin's Creed today |
+| Cloud streaming (Xbox Cloud Gaming, GeForce NOW) | Titles in their catalogues | Subscription and strong connection |
+| Official App Store versions | KOTOR 1/2, Baldur's Gate and Icewind Dale EE | Buy and play |
+
+### X5 Routes to an Assassin's Creed IPA (2026-10-21; ideas only)
+
+Mixing Xbox 360 code with GOG PC assets is not viable: byte order, texture formats, shaders and content differ between the builds.
+
+| Route | How | Covers | Needs JIT | Maturity | Rough effort |
+|---|---|---|---|---|---|
+| A. Xbox 360 static recompilation | XenonRecomp to ARM64, a new 360 runtime, GPU to Metal, assets from the owner's 360 disc | Assassin's Creed only | No | Tool proven on several 360 titles; no Assassin's Creed work exists | Months; several thousand dollars; disc decryption is a legal grey area |
+| B. PC x86 static recompilation | Translate the GOG executable to ARM64 and reimplement the Windows and DirectX 9/10 calls | Assassin's Creed only | No | x86 game recompilation tools are early-stage | Months or more; highest technical risk; cleanest legally |
+| C. Winlator-style iPad app | box64 (x86 dynamic recompiler) + Wine (Windows API) + DXVK (DirectX to Vulkan) + MoltenVK (Vulkan to Metal), running the owner's GOG files from Files | Any PC game the iPad can handle (Assassin's Creed, Oblivion, Fallout 3/NV, Diablo II) | Yes, through StikDebug each launch (X1) | The same stack (Winlator) runs Assassin's Creed on Android; not yet shipped on iOS | Spike about $100 to $300; full app several thousand dollars; months |
+
+- PowerPC (A) is the safer bet for one game without JIT. The x86 hybrid (C) pays off most across the owner's RPG list.
+- C's specific risks: Wine's multi-process design (iOS forbids extra processes, so an in-process variant is needed), JIT on each launch, and 4 GB RAM.
+- Suggested first step if pursued: a route C feasibility spike. First box64 plus a minimal Win32 program in an iOS app on the iPad with JIT via StikDebug, then a DirectX 9 test scene through DXVK and MoltenVK.

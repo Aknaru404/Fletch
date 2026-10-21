@@ -105,7 +105,8 @@ public sealed class LauncherUpdateWorkflow : IUpdateCheckWorkflow
         await AskAboutUsageDataIfNeededAsync();
         if (_session.IsClosed)
             return;
-        _presentation.OpenBrowse();
+        if (PlatformCapabilities.HasAppCatalog)
+            _presentation.OpenBrowse();
         _settings.LocalFirstCatalogMigrationComplete = true;
         _settingsModel.SaveCurrent();
     }
@@ -125,25 +126,34 @@ public sealed class LauncherUpdateWorkflow : IUpdateCheckWorkflow
         _settingsModel.SetUsageData(yes, "prompt");
     }
 
-    public const string UsageDataTitle = "Help improve Quiver Launcher";
+    public const string UsageDataTitle = "Help improve Fletch";
     public const string UsageDataQuestion =
         """
-        Send anonymous usage data to help make Quiver Launcher better?
+        Send anonymous usage data to help make Fletch better?
 
         This shares which features get used, which apps are installed and launched, and any errors, so problems can be found and fixed. It never includes your name, files or folders.
 
         You can change this at any time in Settings → General → Usage data.
         """;
 
-    public const string FirstRunWelcomeTitle = "Welcome to Quiver Launcher";
-    public const string FirstRunWelcomeMessage =
-        """
-        Discover community apps and manage downloads and updates in one place.
+    public const string FirstRunWelcomeTitle = "Welcome to Fletch";
+    public static string FirstRunWelcomeMessage => GetFirstRunWelcomeMessage(PlatformCapabilities.HasAppCatalog);
 
-        Browse the Quiver catalog, choose what you'd like to add, then download it from your library.
+    internal static string GetFirstRunWelcomeMessage(bool hasAppCatalog) => hasAppCatalog
+        ? """
+          Discover community apps and manage downloads and updates in one place.
 
-        You'll need an internet connection to browse the catalog and download apps.
-        """;
+          Browse the catalog, choose what you'd like to add, then download it from your library.
+
+          You'll need an internet connection to browse the catalog and download apps.
+          """
+        : """
+          Discover community apps and manage downloads and updates in one place.
+
+          Add apps from their GitHub, GitLab or Codeberg repository, then download them from your library.
+
+          You'll need an internet connection to download apps.
+          """;
 
     public List<GameInfo> GetPendingAppUpdates() => _gameManager.LibraryApps.Where(g => g.Status == GameStatus.UpdateAvailable).OrderBy(g => g.Name, StringComparer.OrdinalIgnoreCase).ToList();
     public List<GameInfo> GetAppUpdateReviewRows() => _gameManager.LibraryApps.Where(g => g.Status is GameStatus.UpdateAvailable or GameStatus.Updating or GameStatus.Installing).OrderBy(g => g.Name, StringComparer.OrdinalIgnoreCase).ToList();

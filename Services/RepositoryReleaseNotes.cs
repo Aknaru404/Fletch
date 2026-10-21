@@ -23,7 +23,7 @@ public static class RepositoryReleaseNotes
             ? $"{GitLabReleaseSource.ApiBaseUrl}/projects/{Uri.EscapeDataString(game.Repository)}/releases?per_page={Count}"
             : $"https://api.github.com/repos/{game.Repository}/releases?per_page={Count}";
         using var request = new HttpRequestMessage(HttpMethod.Get, url);
-        request.Headers.TryAddWithoutValidation("User-Agent", "QuiverLauncher");
+        request.Headers.TryAddWithoutValidation("User-Agent", QuiverLauncherProfile.Instance.UserAgent);
         if (gitLab && !string.IsNullOrEmpty(settings.GitLabApiToken))
             request.Headers.TryAddWithoutValidation("PRIVATE-TOKEN", settings.GitLabApiToken);
         else if (!gitLab && !string.IsNullOrEmpty(settings.GitHubApiToken))

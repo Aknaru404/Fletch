@@ -76,7 +76,9 @@ namespace QuiverLauncher
         public bool IsDesktopPlatform => !PlatformCapabilities.IsMobile;
         public bool KioskLocked => _settingsViewModel.KioskLocked;
         public bool ShowSettingsButton => !KioskLocked;
-        public bool ShowCatalogNavigation => !KioskLocked;
+        public bool ShowCatalogNavigation => PlatformCapabilities.HasAppCatalog && !KioskLocked;
+        /// <summary>The upstream website, Discord and Patreon buttons; off in Fletch (PLAN D12).</summary>
+        public bool ShowUpstreamLinks => PlatformCapabilities.HasUpstreamCommunityLinks;
         public bool ShowExternalLinks => !KioskLocked;
         public bool ShowUpdateCheckButton => !KioskLocked;
         public bool ShowWindowChromeButtons => IsDesktopPlatform && !KioskLocked && !OSTopBarReplacesWindowControls;
@@ -278,7 +280,7 @@ namespace QuiverLauncher
             LibraryPanel.ConfigureActions(_libraryActions, _libraryCustomization, ToggleAppAutoUpdateAsync, (message, title) => ShowMessageBoxAsync(message, title));
             LibraryPanel.NavigationRequested += (action, game) => _ = _session.RunAsync(() => HandleLibraryNavigationRequestAsync(action, game));
             ModsPanel.Configure(new ModsFeatureContext(_gameManager, () => _settings, _settingsViewModel, _session, _markdownRenderer, Shell), this);
-            var catalog = _catalogClient = new QuiverCatalogClient(_gameManager.HttpClient);
+            var catalog = _catalogClient = new QuiverCatalogClient(_gameManager.HttpClient, _gameManager.CatalogBaseUrl);
             _libraryAdd = new LibraryAddService(_gameManager, _settingsViewModel, _session);
             BrowsePanel.Configure(new BrowseViewModel(catalog, () => _gameManager.LibraryApps, () => _settings.CustomAppListLocation,
                 location => _gameManager.CatalogService.TryLoadListAsync(_gameManager.HttpClient, location, _session.Token)),
@@ -459,7 +461,7 @@ namespace QuiverLauncher
                 case Views.LibraryActionKind.EmptyLibraryAddApp:
                     ShowEntryFormOverlay(forCreate: true);
                     break;
-                case Views.LibraryActionKind.EmptyLibraryBrowseCatalog:
+                case Views.LibraryActionKind.EmptyLibraryBrowseCatalog when PlatformCapabilities.HasAppCatalog:
                     ShowBrowseView();
                     break;
                 case Views.LibraryActionKind.LibrarySearchClear:
@@ -1407,7 +1409,7 @@ namespace QuiverLauncher
         {
             _inputService?.TryHandleContextMenuOptionsDismiss();
             QuiverCatalogApp? listed = null;
-            if (!string.IsNullOrWhiteSpace(game.CatalogSlug))
+            if (PlatformCapabilities.HasAppCatalog && !string.IsNullOrWhiteSpace(game.CatalogSlug))
             {
                 listed = _gameManager.CatalogReleases.ListedApp(game);
                 if (listed == null)
@@ -1504,7 +1506,7 @@ namespace QuiverLauncher
                     }
                     catch (Exception ex) when (!_session.Token.IsCancellationRequested)
                     {
-                        await ShowMessageBoxAsync($"Couldn't load {item.Title} from quiverlauncher.com, so it wasn't added. {ex.Message}", "Could Not Add");
+                        await ShowMessageBoxAsync($"Couldn't load {item.Title} from the catalog, so it wasn't added. {ex.Message}", "Could Not Add");
                         return;
                     }
                 }
@@ -1620,8 +1622,7 @@ namespace QuiverLauncher
                 return;
             try
             {
-                string url = "https://github.com/tgeorgiadis/quiver-launcher/";
-                OpenUrl(url);
+                OpenUrl(VelopackUpdateService.GitHubRepoUrl);
             }
             catch (Exception ex)
             {
@@ -1631,21 +1632,21 @@ namespace QuiverLauncher
 
         private void WebsiteButton_Click(object sender, RoutedEventArgs e)
         {
-            if (KioskLocked)
+            if (KioskLocked || !ShowUpstreamLinks)
                 return;
             try
             {
-                OpenUrl(QuiverCatalogClient.WebsiteUrl);
+                OpenUrl(QuiverCatalogClient.WebsiteUrl!);
             }
             catch (Exception ex)
             {
-                _ = _session.RunAsync(() => ShowMessageBoxAsync($"Failed to open QuiverLauncher.com: {ex.Message}", "Action Error"));
+                _ = _session.RunAsync(() => ShowMessageBoxAsync($"Failed to open the website: {ex.Message}", "Action Error"));
             }
         }
 
         private void DiscordButton_Click(object sender, RoutedEventArgs e)
         {
-            if (KioskLocked)
+            if (KioskLocked || !ShowUpstreamLinks)
                 return;
             try
             {
@@ -1659,7 +1660,7 @@ namespace QuiverLauncher
 
         private void PatreonButton_Click(object sender, RoutedEventArgs e)
         {
-            if (KioskLocked)
+            if (KioskLocked || !ShowUpstreamLinks)
                 return;
             try
             {

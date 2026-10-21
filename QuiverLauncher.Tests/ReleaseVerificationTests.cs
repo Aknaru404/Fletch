@@ -70,7 +70,7 @@ public class ReleaseVerificationTests
         launcher.Network.SitePaths().Should().HaveCount(4);
 
         // What was read is kept, so a moved app still links offline after a restart.
-        var offline = new CatalogReleases(new QuiverCatalogClient(new HttpClient(new Network())),
+        var offline = new CatalogReleases(new QuiverCatalogClient(new HttpClient(new Network()), CatalogHost),
             Path.Combine(QuiverLauncherPaths.UserDataRoot, "Cache"));
         var movedAgain = App("Moved", "old-owner/old-name");
         offline.ApplyKnown(movedAgain);
@@ -172,6 +172,35 @@ public class ReleaseVerificationTests
         app.InstalledVersion.Should().Be("v1");
         app.LatestVersion.Should().Be(expectedLatest);
         app.Status.Should().Be(expectedStatus);
+    }
+
+    [Fact]
+    public async Task With_the_catalog_off_an_app_linked_to_it_gets_its_releases_from_its_repository()
+    {
+        // Fletch's default: no catalog address, so the catalog is never asked (PLAN D12).
+        using var launcher = new Launcher(catalogBaseUrl: null);
+        var token = TestContext.Current.CancellationToken;
+        var repo = Repo();
+        // What the catalog would say, if anything asked it: the app would then follow it.
+        launcher.Network.Site["/release-status?limit=100"] = Page([Status("alpha", repo, "v1")]);
+        launcher.Network.Site["/apps/alpha/release-history?limit=100"] = Page([History("v1", "verified", [], [(Asset, Zip("v1.txt"))])]);
+        launcher.Network.GitHub[$"/repos/{repo}/releases/latest"] = Json(OnGitHub("v2"));
+        launcher.Network.GitHub[$"/repos/{repo}/releases"] = Json(new[] { OnGitHub("v2"), OnGitHub("v1") });
+        // An app added from the catalog by an earlier launcher still carries its link.
+        var app = App("Alpha", repo, manager: launcher.Manager);
+        app.CatalogEntryId = "id-alpha";
+        app.CatalogSlug = "alpha";
+        app.CatalogVerifiedVersion = "v1";
+
+        var versions = await app.FetchReleasesAsync(launcher.Manager.HttpClient, token);
+        var check = await launcher.Manager.CatalogReleases.CheckAsync(app, "v2", token);
+
+        versions.Releases.Select(r => r.tag_name).Should().Equal("v2", "v1");
+        versions.Provider.Should().NotBe("quiver");
+        check.Should().BeNull("an app outside the catalog isn't checked against it");
+        (app.CatalogSlug, app.CatalogVerifiedVersion).Should().Be((null, null));
+        launcher.Network.SitePaths().Should().BeEmpty();
+        launcher.Network.Requests.Should().Contain(u => u.Host == "api.github.com");
     }
 
     [Fact]
@@ -322,7 +351,7 @@ public class ReleaseVerificationTests
         dialogs.Confirmations.Should().BeEmpty("the release itself is verified");
         var error = dialogs.Errors.Should().ContainSingle().Subject;
         error.Title.Should().Be("Download Not Verified");
-        error.Message.Should().Contain($"{Asset} isn't the file Quiver checked");
+        error.Message.Should().Contain($"{Asset} isn't the file the catalog checked");
         // The site is told, so it reads v2 back from GitHub now instead of at its daily check.
         launcher.Network.Reports.Should().Equal(("alpha", "v2", Asset, "mismatch"));
         app.InstalledVersion.Should().Be("v1");
@@ -514,10 +543,10 @@ public class ReleaseVerificationTests
         asked.Should().HaveCount(questions);
         asked[0].Title.Should().Be("Blocked release");
         asked[0].Message.Should().Be(
-            "Quiver blocked Alpha v0.9, so it shouldn't be installed.\n\n• The developer pulled this release.\n\n" +
+            "The catalog blocked Alpha v0.9, so it shouldn't be installed.\n\n• The developer pulled this release.\n\n" +
             "The verified version is v1.0.\n\nInstall it anyway?");
         if (questions == 2)
-            asked[1].Should().Be(("Are you sure? Quiver blocked Alpha v0.9.", "Install a blocked release?"));
+            asked[1].Should().Be(("Are you sure? The catalog blocked Alpha v0.9.", "Install a blocked release?"));
     }
 
     [Fact]
@@ -542,13 +571,13 @@ public class ReleaseVerificationTests
         var (message, title) = asked.Should().ContainSingle().Subject;
         title.Should().Be("Not verified yet");
         message.Should().Be(
-            $"Quiver hasn't verified Alpha v1.1 yet.\n\n• {CatalogReleases.NotSeen}\n\n" +
+            $"The catalog hasn't verified Alpha v1.1 yet.\n\n• {CatalogReleases.NotSeen}\n\n" +
             "It should be verified in about 3 hours.\nThe verified version is v1.0.\n\nInstall it anyway?");
 
         // With nothing verified yet there is no release to point at; a detection is worth a line.
         var flagged = unseen with { VerifiedVersion = null, VerifiedAt = null, ScanVerdict = "flagged", ScanEngines = "3 engines" };
         (await Confirm("v1.1", flagged)).Asked.Single().Message.Should().Be(
-            $"Quiver hasn't verified Alpha v1.1 yet.\n\n• {CatalogReleases.NotSeen}\n• VirusTotal: 3 engines flag one of its files. " +
+            $"The catalog hasn't verified Alpha v1.1 yet.\n\n• {CatalogReleases.NotSeen}\n• VirusTotal: 3 engines flag one of its files. " +
             "Your antivirus may block or remove it.\n\n" +
             "No version of this app is verified yet.\n\nInstall it anyway?");
     }
@@ -651,8 +680,8 @@ public class ReleaseVerificationTests
 
         result.Should().BeFalse();
         asked.Should().ContainSingle().Which.Should().Be((
-            $"5 of 70 engines on VirusTotal flag {Asset}, the file Quiver downloads for Alpha v2.\n\n" +
-            "Quiver checked that this is the developer's own release, and game ports like this are often flagged by mistake. " +
+            $"5 of 70 engines on VirusTotal flag {Asset}, the file Fletch downloads for Alpha v2.\n\n" +
+            "The catalog checked that this is the developer's own release, and game ports like this are often flagged by mistake. " +
             "Even so, your antivirus may block the download or remove files once it's installed, which would stop the app from working.\n\n" +
             "Install anyway?",
             "Your antivirus may block this"));
@@ -747,6 +776,9 @@ public class ReleaseVerificationTests
     /// <summary>Where quiverlauncher.com says a release file downloads from.</summary>
     private static string SiteLink(string version, string file) => $"https://files.example/{version}/{file}";
 
+    /// <summary>The stub catalog's address; Fletch's own catalog client has none.</summary>
+    private const string CatalogHost = "https://catalog.test/api/v1";
+
     private sealed class Network : HttpMessageHandler
     {
         /// <summary>quiverlauncher.com answers by path and query after /api/v1; anything else is a 404.</summary>
@@ -832,7 +864,7 @@ public class ReleaseVerificationTests
         public FileSettingsStore Store { get; }
         public GameManager Manager { get; }
 
-        public Launcher()
+        public Launcher(string? catalogBaseUrl = CatalogHost)
         {
             Directory.CreateDirectory(_root);
             QuiverLauncherPaths.OverrideUserDataRoot = _root;
@@ -841,7 +873,7 @@ public class ReleaseVerificationTests
             Store.Current.AppsPath = Path.Combine(_root, "Apps");
             Store.Save(Store.Current);
             SettingsStoreProvider.Default = Store;
-            Manager = new GameManager(Store, new HttpClient(Network), new AppCatalogService(dataDirectory: _root));
+            Manager = new GameManager(Store, new HttpClient(Network), new AppCatalogService(dataDirectory: _root)) { CatalogBaseUrl = catalogBaseUrl };
         }
 
         public void Dispose()

@@ -27,6 +27,7 @@ public sealed class LibraryViewModel : ObservableViewModel, IDisposable
     public string SearchText => _manager.LibrarySearchText;
     public double CardPixelSize => PlatformCapabilities.IsMobile ? double.NaN : Settings.SlotSize;
     public bool ShowLibraryManagement => !Settings.KioskLocked;
+    public bool ShowCatalogBrowse => ShowLibraryManagement && PlatformCapabilities.HasAppCatalog;
 
     public LibraryViewModel(GameManager manager, SettingsViewModel settings)
     {
@@ -61,7 +62,10 @@ public sealed class LibraryViewModel : ObservableViewModel, IDisposable
     private void SettingsChanged(object? sender, PropertyChangedEventArgs e)
     {
         if (e.PropertyName is null or nameof(SettingsViewModel.KioskLocked))
+        {
             Notify(nameof(ShowLibraryManagement));
+            Notify(nameof(ShowCatalogBrowse));
+        }
         if (e.PropertyName == nameof(SettingsViewModel.KioskLocked))
             ApplyDisplaySettings();
         Notify(nameof(CardPixelSize));

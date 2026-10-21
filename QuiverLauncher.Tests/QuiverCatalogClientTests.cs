@@ -27,6 +27,8 @@ public class QuiverCatalogClientTests : IDisposable
          "verified":{"pinned":true,"prerelease":false,"releasedAt":1791027079000,"version":"v0.3.51"}}
         """;
 
+    private const string TestHost = "https://catalog.test/api/v1";
+
     private readonly string _dataDirectory = Path.Combine(Path.GetTempPath(), "QuiverLauncher.Tests", Guid.NewGuid().ToString("N"));
     private readonly List<Uri> _requests = [];
     private HttpClient? _http;
@@ -52,7 +54,7 @@ public class QuiverCatalogClientTests : IDisposable
             var (status, body) = queue.Dequeue();
             return new HttpResponseMessage(status) { Content = new StringContent(body) };
         }));
-        return new QuiverCatalogClient(_http, QuiverCatalogClient.DefaultBaseUrl);
+        return new QuiverCatalogClient(_http, TestHost);
     }
 
     private AppCatalogService Parser() => new(dataDirectory: _dataDirectory);
@@ -128,77 +130,40 @@ public class QuiverCatalogClientTests : IDisposable
             new System.Security.Authentication.AuthenticationException(
                 "The remote certificate is invalid because of errors in the certificate chain: UntrustedRoot"));
 
-    /// <summary>A client whose requests to api.quiverlauncher.com fail the TLS handshake.</summary>
-    private QuiverCatalogClient ClientBehindBrokenTls(Func<HttpRequestMessage, HttpResponseMessage> deploymentHost)
-    {
-        _http = new HttpClient(new Handler(request =>
-        {
-            _requests.Add(request.RequestUri!);
-            return request.RequestUri!.Host == "api.quiverlauncher.com" ? throw TlsFailure() : deploymentHost(request);
-        }));
-        return new QuiverCatalogClient(_http, QuiverCatalogClient.DefaultBaseUrl);
-    }
-
     [Fact]
-    public async Task When_the_custom_domain_fails_its_TLS_handshake_the_deployment_host_answers_from_then_on()
-    {
-        var token = TestContext.Current.CancellationToken;
-        var client = ClientBehindBrokenTls(_ => new HttpResponseMessage(HttpStatusCode.OK)
-        {
-            Content = new StringContent($$"""{"items":[{{G1RDeluxe}}],"isDone":true}"""),
-        });
-
-        (await client.GetAppsAsync(new QuiverCatalogQuery(), null, token)).Items.Should().ContainSingle();
-        (await client.GetAppsAsync(new QuiverCatalogQuery(), null, token)).Items.Should().ContainSingle();
-
-        _requests.Select(u => u.Host).Should().Equal(
-            "api.quiverlauncher.com", "famous-wildebeest-660.convex.site", "famous-wildebeest-660.convex.site");
-        _requests[1].AbsolutePath.Should().Be("/api/v1/apps");
-    }
-
-    [Fact]
-    public async Task When_neither_host_answers_the_player_sees_the_first_failure()
-    {
-        var token = TestContext.Current.CancellationToken;
-        var client = ClientBehindBrokenTls(_ => throw new HttpRequestException("No such host is known."));
-
-        Func<Task> load = () => client.GetAppsAsync(new QuiverCatalogQuery(), null, token);
-        var failure = (await load.Should().ThrowAsync<HttpRequestException>()).Which;
-
-        QuiverCatalogClient.Explain(failure).Should().Be(
-            "The SSL connection could not be established: The remote certificate is invalid because of errors in the certificate chain: UntrustedRoot");
-        Telemetry.CauseOf(failure).Should().Be(
-            "AuthenticationException: The remote certificate is invalid because of errors in the certificate chain: UntrustedRoot");
-    }
-
-    [Fact]
-    public async Task A_499_from_the_custom_domain_also_goes_to_the_deployment_host()
-    {
-        var token = TestContext.Current.CancellationToken;
-        _http = new HttpClient(new Handler(request =>
-        {
-            _requests.Add(request.RequestUri!);
-            return request.RequestUri!.Host == "api.quiverlauncher.com"
-                ? new HttpResponseMessage((HttpStatusCode)499) { Content = new StringContent("") }
-                : new HttpResponseMessage(HttpStatusCode.OK) { Content = new StringContent("""{"consoles":[]}""") };
-        }));
-        var client = new QuiverCatalogClient(_http, QuiverCatalogClient.DefaultBaseUrl);
-
-        await client.GetFacetsAsync(token);
-
-        _requests.Select(u => u.Host).Should().Equal("api.quiverlauncher.com", "famous-wildebeest-660.convex.site");
-    }
-
-    [Fact]
-    public async Task Another_api_address_never_falls_back()
+    public async Task A_failing_address_is_never_retried_on_another_host()
     {
         var token = TestContext.Current.CancellationToken;
         _http = new HttpClient(new Handler(request => { _requests.Add(request.RequestUri!); throw TlsFailure(); }));
-        var client = new QuiverCatalogClient(_http, "https://staging.example/api/v1");
+        var client = new QuiverCatalogClient(_http, TestHost);
 
         Func<Task> load = () => client.GetFacetsAsync(token);
-        await load.Should().ThrowAsync<HttpRequestException>();
+        var failure = (await load.Should().ThrowAsync<HttpRequestException>()).Which;
+
         _requests.Should().ContainSingle();
+        QuiverCatalogClient.Explain(failure).Should().Be(
+            "The SSL connection could not be established: The remote certificate is invalid because of errors in the certificate chain: UntrustedRoot");
+    }
+
+    [Fact]
+    public async Task Default_client_is_off_and_never_makes_a_request()
+    {
+        var token = TestContext.Current.CancellationToken;
+        _http = new HttpClient(new Handler(request => { _requests.Add(request.RequestUri!); return new HttpResponseMessage(HttpStatusCode.OK); }));
+        var client = new QuiverCatalogClient(_http);
+
+        client.Enabled.Should().BeFalse();
+        QuiverCatalogClient.WebsiteUrl.Should().BeNull();
+        QuiverCatalogClient.ReviewPageUrl("mgba").Should().BeNull();
+        Func<Task> apps = () => client.GetAppsAsync(new QuiverCatalogQuery(), null, token);
+        (await apps.Should().ThrowAsync<HttpRequestException>()).Which.Message.Should().Be(QuiverCatalogClient.DisabledMessage);
+        Func<Task> status = () => client.GetReleaseStatusAsync(null, token);
+        await status.Should().ThrowAsync<HttpRequestException>();
+        Func<Task> detail = () => client.GetDetailAsync("mgba", token);
+        await detail.Should().ThrowAsync<HttpRequestException>();
+        await client.ReportDownloadProblemAsync("mgba", "v1", "mgba.zip", "missing", token);
+
+        _requests.Should().BeEmpty();
     }
 
     [Fact]

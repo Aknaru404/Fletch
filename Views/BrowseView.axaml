@@ -85,7 +85,7 @@
 			</StackPanel>
 			<StackPanel x:Name="BrowseSourceTabs" Grid.Column="1" Orientation="Horizontal" Spacing="10" Margin="24,0,0,0"
 						VerticalAlignment="Center">
-				<Button x:Name="BrowseCatalogTabButton" Classes="catalog-filter selected" Content="Quiver catalog"
+				<Button x:Name="BrowseCatalogTabButton" Classes="catalog-filter selected" Content="Catalog"
 						FontSize="11" MinHeight="32" Click="BrowseSourceTab_Click"/>
 				<Button x:Name="BrowseCustomListTabButton" Classes="catalog-filter" Content="My app list"
 						FontSize="11" MinHeight="32" Click="BrowseSourceTab_Click"/>

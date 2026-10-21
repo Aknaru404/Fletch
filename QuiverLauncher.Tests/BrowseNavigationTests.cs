@@ -18,6 +18,9 @@ namespace QuiverLauncher.Tests;
 /// <summary>Browse driven only by the shell's controller/keyboard actions, against a stubbed quiverlauncher.com.</summary>
 public class BrowseNavigationTests
 {
+    // The stubbed catalog: Fletch has no default one (PlatformCapabilities.HasAppCatalog).
+    private const string CatalogBaseUrl = "https://catalog.test/api/v1";
+
     [AvaloniaFact]
     public async Task Controller_moves_through_browse_opens_details_adds_and_returns_to_the_card()
     {
@@ -28,7 +31,7 @@ public class BrowseNavigationTests
         var store = new Store();
         store.Current.AppsPath = Path.Combine(root, "Apps");
         using var http = new HttpClient(new Site());
-        var manager = new GameManager(store, http) { UiThreadInvoker = action => Dispatcher.UIThread.InvokeAsync(action).GetTask() };
+        var manager = new GameManager(store, http) { CatalogBaseUrl = CatalogBaseUrl, UiThreadInvoker = action => Dispatcher.UIThread.InvokeAsync(action).GetTask() };
         var view = new MainView(new() { SettingsStore = store, GameManager = manager, InitializeOnOpen = false, EnableInput = false, EnableMusic = false });
         var window = new Window { Content = view, Width = 1280, Height = 860 };
         var browse = view.FindControl<BrowseView>("BrowsePanel")!;
@@ -87,7 +90,8 @@ public class BrowseNavigationTests
             Move(NavigationDirection.Right).Should().BeTrue();
             Shell(view, "HandleConfirmAction");
             details.BrowseDetailsFeedback.IsVisible.Should().BeTrue();
-            details.BrowseDetailsReviewButton.IsVisible.Should().BeTrue();
+            // Fletch has no catalog website to give feedback on, so there is no button for it.
+            details.BrowseDetailsReviewButton.IsVisible.Should().BeFalse();
             // Up lands on whatever sits nearest above: from Overview, Add.
             Move(NavigationDirection.Left).Should().BeTrue();
             Move(NavigationDirection.Left).Should().BeTrue();
@@ -136,7 +140,7 @@ public class BrowseNavigationTests
         var store = new Store();
         store.Current.AppsPath = Path.Combine(root, "Apps");
         using var http = new HttpClient(new Site());
-        var manager = new GameManager(store, http) { UiThreadInvoker = action => Dispatcher.UIThread.InvokeAsync(action).GetTask() };
+        var manager = new GameManager(store, http) { CatalogBaseUrl = CatalogBaseUrl, UiThreadInvoker = action => Dispatcher.UIThread.InvokeAsync(action).GetTask() };
         var view = new MainView(new() { SettingsStore = store, GameManager = manager, InitializeOnOpen = false, EnableInput = false, EnableMusic = false });
         var window = new Window { Content = view, Width = 392, Height = 840 };
         var browse = view.FindControl<BrowseView>("BrowsePanel")!;
@@ -210,7 +214,7 @@ public class BrowseNavigationTests
         var store = new Store();
         store.Current.AppsPath = Path.Combine(root, "Apps");
         using var http = new HttpClient(new Site());
-        var manager = new GameManager(store, http) { UiThreadInvoker = action => Dispatcher.UIThread.InvokeAsync(action).GetTask() };
+        var manager = new GameManager(store, http) { CatalogBaseUrl = CatalogBaseUrl, UiThreadInvoker = action => Dispatcher.UIThread.InvokeAsync(action).GetTask() };
         var view = new MainView(new() { SettingsStore = store, GameManager = manager, InitializeOnOpen = false, EnableInput = false, EnableMusic = false });
         // A 1920×1080 handheld at its usual density, in landscape.
         var window = new Window { Content = view, Width = 853, Height = 480 };
@@ -276,7 +280,7 @@ public class BrowseNavigationTests
         var store = new Store();
         store.Current.AppsPath = Path.Combine(root, "Apps");
         using var http = new HttpClient(new Site());
-        var manager = new GameManager(store, http) { UiThreadInvoker = action => Dispatcher.UIThread.InvokeAsync(action).GetTask() };
+        var manager = new GameManager(store, http) { CatalogBaseUrl = CatalogBaseUrl, UiThreadInvoker = action => Dispatcher.UIThread.InvokeAsync(action).GetTask() };
         var view = new MainView(new() { SettingsStore = store, GameManager = manager, InitializeOnOpen = false, EnableInput = false, EnableMusic = false });
         // Short, so the page scrolls.
         var window = new Window { Content = view, Width = 1280, Height = 480 };
@@ -361,7 +365,7 @@ public class BrowseNavigationTests
         var store = new Store();
         store.Current.AppsPath = Path.Combine(root, "Apps");
         using var http = new HttpClient(new Site());
-        var manager = new GameManager(store, http) { UiThreadInvoker = action => Dispatcher.UIThread.InvokeAsync(action).GetTask() };
+        var manager = new GameManager(store, http) { CatalogBaseUrl = CatalogBaseUrl, UiThreadInvoker = action => Dispatcher.UIThread.InvokeAsync(action).GetTask() };
         var view = new MainView(new() { SettingsStore = store, GameManager = manager, InitializeOnOpen = false, EnableInput = false, EnableMusic = false });
         // The Steam Deck's screen.
         var window = new Window { Content = view, Width = 1280, Height = 800 };

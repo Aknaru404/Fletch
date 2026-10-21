@@ -152,7 +152,7 @@ public static class GameDownloadInstallService
                 check = check with
                 {
                     State = check.State == ReleaseCheckState.Blocked ? ReleaseCheckState.Blocked : ReleaseCheckState.Unverified,
-                    Reasons = [.. check.Reasons, $"Quiver checked this release's other files, not {asset.name}."],
+                    Reasons = [.. check.Reasons, $"The catalog checked this release's other files, not {asset.name}."],
                     Checksums = new Dictionary<string, string>(),
                 };
             // VirusTotal's verdict on the file downloaded, not the release's other files.
@@ -687,7 +687,7 @@ public static class GameDownloadInstallService
 
 /// <summary>A download that isn't the file it should be; nothing was installed from it.</summary>
 public sealed class DownloadMismatchException(string fileName, string version, bool checkedByQuiver) : Exception(checkedByQuiver
-    ? $"{fileName} isn't the file Quiver checked for this release, so it wasn't installed. It may have been changed since Quiver saw it."
+    ? $"{fileName} isn't the file the catalog checked for this release, so it wasn't installed. It may have been changed since the catalog saw it."
     : $"{fileName} doesn't match the checksum its developer published, so it wasn't installed. Try downloading it again.")
 {
     public string FileName { get; } = fileName;

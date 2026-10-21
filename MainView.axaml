@@ -70,7 +70,7 @@
 								VerticalAlignment="Center"
 								Margin="20,0,0,0"
 								Spacing="2">
-						<TextBlock Text="QUIVER"
+						<TextBlock Text="FLETCH"
 								   FontSize="18"
 								   FontWeight="Bold"
 								   Foreground="{DynamicResource ThemeText}"
@@ -170,10 +170,11 @@
 						<Border Height="1" Background="{DynamicResource ThemeBorder}" Margin="-12,0,-12,8"/>
 					<StackPanel Orientation="Horizontal" Spacing="8" HorizontalAlignment="Center">
 						<Button x:Name="WebsiteFooterButton"
+								IsVisible="{Binding ShowUpstreamLinks}"
 								Classes="iconbutton"
 								Width="44"
 								Height="44"
-								ToolTip.Tip="QuiverLauncher.com"
+								ToolTip.Tip="Website"
 								Click="WebsiteButton_Click">
 							<Image Width="32" Height="32"
 								   Source="avares://QuiverLauncher/Assets/quiver-icon.png"/>
@@ -188,6 +189,7 @@
 								   Source="avares://QuiverLauncher/Assets/Github.png"/>
 						</Button>
 						<Button x:Name="DiscordFooterButton"
+								IsVisible="{Binding ShowUpstreamLinks}"
 								Classes="iconbutton"
 								Width="44"
 								Height="44"
@@ -197,10 +199,11 @@
 								   Source="avares://QuiverLauncher/Assets/Discord.png"/>
 						</Button>
 						<Button x:Name="PatreonFooterButton"
+								IsVisible="{Binding ShowUpstreamLinks}"
 								Classes="iconbutton"
 								Width="44"
 								Height="44"
-								ToolTip.Tip="Support Quiver on Patreon"
+								ToolTip.Tip="Patreon"
 								Click="PatreonButton_Click">
 							<Image Width="32" Height="32"
 								   Source="avares://QuiverLauncher/Assets/Patreon.png"/>

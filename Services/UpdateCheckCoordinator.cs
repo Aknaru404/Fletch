@@ -9,12 +9,12 @@ public sealed record UpdateCheckResult(ManualLauncherCheckResult Launcher, Libra
     public string? Note => Complete ? null : Interrupted ? "Update check incomplete · Some checks did not finish"
         : Apps.RateLimited > 0 ? "Update check incomplete · Release checks are rate limited"
         : !Apps.Complete ? $"Update check incomplete · {Apps.Failed + Apps.Cancelled} apps could not be checked"
-        : "Could not check Quiver Launcher";
+        : "Could not check Fletch";
 
     public string Details => string.Join("\n\n", Apps.Apps
         .Where(app => app.Outcome != AppCheckOutcome.Successful)
         .Select(app => $"{app.AppName ?? app.IdentityKey}: {app.Reason ?? (app.Outcome == AppCheckOutcome.Cancelled ? "Check did not finish." : app.Outcome == AppCheckOutcome.RateLimited ? "Release service rate limit reached." : "Could not read release information.")}")
-        .Concat(Launcher.CheckSucceeded ? [] : new[] { "Quiver Launcher: Its update check did not complete successfully. Try again." }));
+        .Concat(Launcher.CheckSucceeded ? [] : new[] { "Fletch: Its update check did not complete successfully. Try again." }));
 }
 
 public interface IUpdateCheckWorkflow

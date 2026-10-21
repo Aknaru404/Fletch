@@ -13,7 +13,7 @@ public static class ReleaseWarnings
     {
         if (check.State == ReleaseCheckState.Blocked)
             return await ask(Blocked(app, version, check), "Blocked release") &&
-                await ask($"Are you sure? Quiver blocked {app} {version}.", "Install a blocked release?");
+                await ask($"Are you sure? The catalog blocked {app} {version}.", "Install a blocked release?");
         return await ask(Unverified(app, version, check), "Not verified yet");
     }
 
@@ -22,14 +22,14 @@ public static class ReleaseWarnings
         ask(Flagged(app, version, check, update), "Your antivirus may block this");
 
     internal static string Flagged(string app, string version, ReleaseCheck check, bool update) =>
-        $"{check.ScanEngines ?? "Several engines"} on VirusTotal flag {(check.ScanFile is { } file ? file + ", the file Quiver downloads for" : "a file of")} {app} {version}." +
-        "\n\nQuiver checked that this is the developer's own release, and game ports like this are often flagged by mistake. " +
+        $"{check.ScanEngines ?? "Several engines"} on VirusTotal flag {(check.ScanFile is { } file ? file + ", the file Fletch downloads for" : "a file of")} {app} {version}." +
+        "\n\nThe catalog checked that this is the developer's own release, and game ports like this are often flagged by mistake. " +
         "Even so, your antivirus may block the download or remove files once it's installed, which would stop the app from working." +
         $"\n\n{(update ? "Update" : "Install")} anyway?";
 
     internal static string Unverified(string app, string version, ReleaseCheck check)
     {
-        var text = new StringBuilder($"Quiver hasn't verified {app} {version} yet.");
+        var text = new StringBuilder($"The catalog hasn't verified {app} {version} yet.");
         Details(text, check);
         var after = new List<string>();
         if (check.VerifiedAt is { } at && at > DateTimeOffset.UtcNow)
@@ -44,7 +44,7 @@ public static class ReleaseWarnings
 
     internal static string Blocked(string app, string version, ReleaseCheck check)
     {
-        var text = new StringBuilder($"Quiver blocked {app} {version}, so it shouldn't be installed.");
+        var text = new StringBuilder($"The catalog blocked {app} {version}, so it shouldn't be installed.");
         Details(text, check);
         if (Verified(version, check) is { Length: > 0 } verified) text.Append("\n\n").Append(verified);
         return text.Append("\n\nInstall it anyway?").ToString();

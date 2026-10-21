@@ -39,7 +39,7 @@ public static class ModArchiveDownload
         ArgumentNullException.ThrowIfNull(content);
 
         var total = content.Headers.ContentLength ?? totalHint;
-        var tempDir = Path.Combine(Path.GetTempPath(), "QuiverMods");
+        var tempDir = Path.Combine(Path.GetTempPath(), "FletchMods");
         Directory.CreateDirectory(tempDir);
         var tempPath = Path.Combine(tempDir, $"{Guid.NewGuid():N}.mod");
 

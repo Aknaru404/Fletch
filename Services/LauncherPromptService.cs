@@ -60,7 +60,7 @@ public sealed class LauncherPromptService(LauncherSession session, LauncherDialo
             };
             var updateQuiverButton = new Button
             {
-                Content = "Update Quiver Launcher",
+                Content = AppUpdateReviewMessages.UpdateLauncherButtonLabel,
                 MinWidth = 110,
                 Margin = new Thickness(0, 0, 8, 0),
             };
@@ -211,7 +211,8 @@ public sealed class LauncherPromptService(LauncherSession session, LauncherDialo
     {
         var browseButton = new Button
         {
-            Content = "Browse app catalog",
+            // Fletch has no App Catalog to browse (PlatformCapabilities.HasAppCatalog); the button only closes the welcome.
+            Content = PlatformCapabilities.HasAppCatalog ? "Browse app catalog" : "Get started",
             MinWidth = 190,
             MinHeight = 44,
             Padding = new Thickness(20, 10),

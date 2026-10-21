@@ -102,12 +102,32 @@ public class TelemetryTests
     }
 
     [Fact]
-    public void A_test_token_never_reaches_PostHog_itself()
+    public void Nothing_is_available_without_both_a_token_and_a_host()
     {
-        new Telemetry("phc_test_123", "https://us.i.posthog.com").Available.Should().BeFalse();
         new Telemetry("phc_test_123", "http://127.0.0.1:9").Available.Should().BeTrue();
-        new Telemetry(null).Available.Should().BeFalse();
-        new Telemetry("  ").Available.Should().BeFalse();
+        new Telemetry("phc_project").Available.Should().BeFalse();
+        new Telemetry("phc_project", "  ").Available.Should().BeFalse();
+        new Telemetry(null, "http://127.0.0.1:9").Available.Should().BeFalse();
+        new Telemetry("  ", "http://127.0.0.1:9").Available.Should().BeFalse();
+    }
+
+    [Fact]
+    public void The_default_client_is_never_available_even_with_a_token_in_the_environment()
+    {
+        var previous = Environment.GetEnvironmentVariable("QUIVER_POSTHOG_PROJECT_TOKEN");
+        var previousHost = Environment.GetEnvironmentVariable("QUIVER_POSTHOG_HOST");
+        Environment.SetEnvironmentVariable("QUIVER_POSTHOG_PROJECT_TOKEN", "phc_project");
+        Environment.SetEnvironmentVariable("QUIVER_POSTHOG_HOST", "http://127.0.0.1:9");
+        try
+        {
+            using var client = Telemetry.CreateDefault();
+            client.Available.Should().BeFalse();
+        }
+        finally
+        {
+            Environment.SetEnvironmentVariable("QUIVER_POSTHOG_PROJECT_TOKEN", previous);
+            Environment.SetEnvironmentVariable("QUIVER_POSTHOG_HOST", previousHost);
+        }
     }
 
     [Theory]
