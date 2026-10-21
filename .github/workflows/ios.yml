@@ -16,6 +16,8 @@ concurrency:
 
 env:
   BUNDLE_ID: io.github.aknaru404.fletch
+  # Must match what the pinned iOS SDK pack requires (scripts/ci/ios-workload-rollback.json).
+  XCODE_VERSION: "26.3"
   DOTNET_CLI_TELEMETRY_OPTOUT: "1"
   DOTNET_NOLOGO: "1"
 
@@ -30,13 +32,13 @@ jobs:
     - name: Checkout
       uses: actions/checkout@v4
 
-    # The iOS workload is pinned to the 26.2 SDK pack (scripts/ci/ios-workload-rollback.json), which needs
-    # Xcode 26.2 exactly. Runner images do not ship Xcode 27 yet, which the newest workload (27.x) requires.
-    - name: Select Xcode 26.2
+    # The iOS workload is pinned to SDK pack 26.2.10233 (scripts/ci/ios-workload-rollback.json), which needs
+    # Xcode 26.3. Runner images do not ship Xcode 27 yet, which the newest workload (27.x) requires.
+    - name: Select Xcode
       run: |
         ls -d /Applications/Xcode*.app
-        xcode="$(ls -d /Applications/Xcode_26.2*.app | sort -V | tail -1)"
-        [ -n "$xcode" ] || { echo "::error::Xcode 26.2 is not on this runner image"; exit 1; }
+        xcode="/Applications/Xcode_${XCODE_VERSION}.app"
+        [ -d "$xcode" ] || { echo "::error::Xcode $XCODE_VERSION is not on this runner image"; exit 1; }
         sudo xcode-select -s "$xcode"
         case "$RUNNER_ARCH" in ARM64) sim=iossimulator-arm64 ;; *) sim=iossimulator-x64 ;; esac
         echo "SIM_RID=$sim" >> "$GITHUB_ENV"
