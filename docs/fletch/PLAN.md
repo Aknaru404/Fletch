@@ -146,3 +146,16 @@ Constraints: about 4.2 GB free storage on the device; Morrowind data with expans
 - Public/private split, as UnleashedRecomp and Zelda 64: Recompiled do: the recompiler toolkit, iOS runtime, Metal renderer and the game's patches and configuration can be public, with free macOS CI, because they contain no game code. The owner's dump, the code generated from it and the resulting IPA stay private (private repository with private CI, or a Mac) and are for personal sideloading only, because public CI artifacts would distribute translated game code. Only that private build step needs paid macOS minutes.
 - Decrypting a console executable sits in a legal grey area, including in the UK.
 - Oblivion (360) and Assassin's Creed (360) have no existing recompilation project. REA (morluto/rea) can help only with binary analysis; it does not recompile.
+
+### X2 and X3: how game files are supplied, and legal notes (2026-10-21; ideas only, not legal advice)
+
+| Kind | IPA contains | Owner supplies through Files at first launch |
+|---|---|---|
+| Engine rebuild (X2: OpenMW, DevilutionX, fallout2-ce, Daggerfall Unity) | Only the open-source engine; no game code | All game data from a legitimately owned copy |
+| Static recompilation (X3: UnleashedRecomp model, any 360 title) | The runtime plus the game's program code, translated to ARM64 at build time from the owner's dump (iOS forbids generating native code on device) | Game assets only (textures, audio, levels) |
+
+- Engine rebuilds with owned copies are the low-risk route.
+- UK: there is no private-copying exception (the 2014 exception was quashed by the High Court in 2015), so dumping an owned disc is technically outside an exception, although personal use is not pursued in practice.
+- Decrypting a console executable engages the anti-circumvention provisions (CDPA s.296ZA onwards); the decompilation exception (s.50B) is narrow, for interoperability.
+- A recompiled IPA contains derived game code: keep it for personal sideloading only and never publish it. Sharing it is where takedowns happen.
+- Sideloading one's own build to one's own device through Signulous is within normal developer signing use.
