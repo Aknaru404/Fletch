@@ -141,6 +141,7 @@ Constraints: about 4.2 GB free storage on the device; Morrowind data with expans
 
 - The instruction set and translator are the same for every game. The per-game work is code analysis, statically linked middleware, GPU usage, timing and threading.
 - The A12X (CPU, GPU, 4 GB RAM) is not the limiting factor for native recompiled code. The engineering effort is.
-- Stage C needs a Mac with Xcode for debugging. Recompiled code derived from the game must stay in a private repository and be used for personal sideloading only, which means paid private macOS CI minutes.
+- Stage C needs a Mac with Xcode for debugging.
+- Public/private split, as UnleashedRecomp and Zelda 64: Recompiled do: the recompiler toolkit, iOS runtime, Metal renderer and the game's patches and configuration can be public, with free macOS CI, because they contain no game code. The owner's dump, the code generated from it and the resulting IPA stay private (private repository with private CI, or a Mac) and are for personal sideloading only, because public CI artifacts would distribute translated game code. Only that private build step needs paid macOS minutes.
 - Decrypting a console executable sits in a legal grey area, including in the UK.
 - Oblivion (360) and Assassin's Creed (360) have no existing recompilation project. REA (morluto/rea) can help only with binary analysis; it does not recompile.
