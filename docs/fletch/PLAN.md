@@ -105,3 +105,10 @@ None. Q1 to Q4 decided on 2026-10-21 as D8 to D11.
 | R6 | GitHub API rate limits without a token | Medium | Low | Existing cache files; optional personal token setting |
 | R7 | GitHub macOS runner capacity delays or cancels iOS jobs | Occurred (M1: arm64 runners not acquired 3 times) | Medium | Intel `macos-26-intel` runner; one macOS job per push; `workflow_dispatch` re-run; no macOS work on upstream jobs |
 | R8 | An upstream Linux test fails intermittently (once in the first local baseline run, once in CI on 550953d) | Medium | Low | Re-run once; capture the test name from G1 TRX output when it recurs; fix or report upstream |
+
+## 9. Ideas to explore (no decision, not planned)
+
+| Ref | Idea | Notes |
+|---|---|---|
+| X1 | One-tap JIT for apps that need it (emulators): Fletch "Launch with JIT" hands the bundle ID to StikDebug via its URL scheme | JIT cannot be enabled permanently on iOS: a debugger must attach on each launch. Needs StikDebug installed, a one-time pairing file made on a computer, and a `get-task-allow` signature from Signulous. Not needed for natively compiled engines. Recorded 2026-10-21 at the owner's request; no decision. |
+| X2 | Per-game iOS builds of open-source engines (for example dhewm3, OpenJK, Arx Libertatis, OpenMW) as separate apps, rendered through Metal (ANGLE or MoltenVK), tracked and delivered through Fletch | Each game becomes its own IPA. The owner supplies legitimately owned game data through Files. Console static recompilations are research only. Device limits: about 4 GB RAM and little free storage. Recorded 2026-10-21; no decision. |
