@@ -9,10 +9,10 @@ type: Bug
 ---
 
 **Operating system**
-Windows / Linux / Android (include the OS version if known)
+iPhone or iPad model and iOS / iPadOS version
 
-**Quiver Launcher version**
-e.g. 3.4.0
+**Fletch version and commit**
+e.g. 0.1.0 (6c75726), from the IPA file name
 
 **What went wrong?**
 Describe what happened and what you expected instead.
@@ -21,4 +21,4 @@ Describe what happened and what you expected instead.
 List the steps, if known. Include app or catalog names where relevant.
 
 **Screenshots or extra details (optional)**
-Add anything that helps explain the problem.
+Add anything that helps explain the problem. If the app crashed, attach `crash.log` from Files > On My iPhone/iPad > Fletch.

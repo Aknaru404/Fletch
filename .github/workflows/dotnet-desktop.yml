@@ -51,6 +51,8 @@ jobs:
 
   pack-windows:
     needs: test
+    # Fletch fork: upstream packaging needs upstream secrets and scarce macOS runners; run it only on demand.
+    if: github.repository == 'tgeorgiadis/quiver-launcher' || github.event_name == 'workflow_dispatch'
     runs-on: windows-latest
     # Stable OIDC subject for tags and branches: repo:…/quiver-launcher:environment:signing
     environment: signing
@@ -223,6 +225,8 @@ jobs:
 
   pack-macos:
     needs: test
+    # Fletch fork: upstream packaging needs upstream secrets and scarce macOS runners; run it only on demand.
+    if: github.repository == 'tgeorgiadis/quiver-launcher' || github.event_name == 'workflow_dispatch'
     runs-on: macos-latest
     strategy:
       fail-fast: false
@@ -318,6 +322,8 @@ jobs:
   # Build and smoke-test the experimental Linux x64 Flatpak release bundle.
   pack-flatpak:
     needs: test
+    # Fletch fork: upstream packaging needs upstream secrets and scarce macOS runners; run it only on demand.
+    if: github.repository == 'tgeorgiadis/quiver-launcher' || github.event_name == 'workflow_dispatch'
     runs-on: ubuntu-latest
 
     steps:
