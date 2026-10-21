@@ -35,6 +35,9 @@ Out of scope: launching downloaded apps, installing packages from inside the app
 | D9 | Generated fletching-mark icon, replaceable later | Owner, 2026-10-21 |
 | D10 | Fletch checks its own GitHub releases and shows a notice with a link; no self-update | Owner, 2026-10-21 |
 | D11 | Desktop and Android heads keep building and testing; not released from the fork | Owner, 2026-10-21 |
+| D12 | Upstream services are disabled at the source (hosts blanked, catalog entry points hidden), not deleted, to keep the upstream diff small | Owner, 2026-10-21 |
+| D13 | M2 rebrands identifiers and all text reachable on iOS; Desktop/Android-only text (tray, Mac menu, CLI, Windows installer, Flatpak, Android updater) stays as upstream | Owner, 2026-10-21 |
+| D14 | The Fletch "new version available" notice moves to M8, when a release exists to detect; M2 only points update sources at Aknaru404/Fletch | Owner, 2026-10-21 |
 
 ## 3. Architecture
 
@@ -71,13 +74,13 @@ Status: Draft, Approved, In progress, Done. App code starts only for a task unde
 |---|---|---|---|---|
 | M0 Harness | T0.1 `CLAUDE.md`, agents, gate scripts, SessionStart hook. T0.2 This plan. T0.3 Baseline: Linux suite 1,789 passed, 3 root-only failures tolerated. T0.4 Fork CI: upstream Windows, macOS and Flatpak packaging run only on manual dispatch (moved from T1.3; macOS runner capacity cancelled PR 1). | G1, owner review | No | Approved |
 | M1 Toolchain spike | T1.1 Empty `Fletch.iOS` head showing the existing `MainView`. T1.2 `ios.yml` producing an unsigned IPA and simulator screenshots. T1.3 (moved to T0.4). T1.4 Owner installs via Signulous and confirms launch (Pass, FLETCH-G5-M1-01). T1.5 `Info.plist` file-sharing keys added early (from T5.3) so `crash.log` in Documents can be fetched from Files during G5. | G1 to G5 | Yes (launch only) | Done pending merge (G1 to G5 Pass) |
-| M2 Identity and upstream services | T2.1 Fletch identifiers and icon; `LSSupportsGameMode` false (G5 M1-O3). T2.2 Remove telemetry. T2.3 Remove catalog and announcements, hide the catalog UI. T2.4 Update checks point to Aknaru404/Fletch releases (notify only). | G1 to G4 | No | Draft |
+| M2 Identity and upstream services | T2.1 Identity: profile values, data folder name, user agents, update sources (Velopack, CLI, Android updater) to Aknaru404/Fletch, `LSSupportsGameMode` false (G5 M1-O3). T2.2 Telemetry inert: no build-time or env token, no PostHog host. T2.3 Catalog, announcements and artwork resizer disabled at source; catalog, Discord, Patreon and upstream repo entry points hidden or repointed. T2.5 Rebrand text reachable on iOS (D13). | G1 to G5 | Yes (identity and no upstream calls) | Approved |
 | M3 Platform layer | T3.1 Capability flags and call-site audit. T3.2 iOS paths: caches (`Cache/`, artwork) under `Library/Caches` with a size cap, library under Documents (G2 M1-A2, G3 M1-AP5); document or replace the `OverrideUserDataRoot` test seam used by the iOS head (G3 M1-S1); keep identity in the csproj only and drop duplicate Info.plist keys (G3 M1-S2). T3.3 `TargetOS.iOS` and asset selection. T3.5 iOS `IAppInstallLaunchService` so Launch and Install never reach the desktop `Process.Start` path (G2 M1-A7). T3.4 Disable Wine, Steam shortcuts, tray, gamepad and Velopack on iOS through the flags. | G1 to G4 | No | Draft |
 | M4 IPA hand-off | T4.1 Download to `Documents/Downloads` with progress and cancel. T4.2 Share sheet hand-off. T4.3 Library states: Not downloaded, Downloaded, Update available. T4.4 Delete downloaded file. | G1 to G5 | Yes | Draft |
 | M5 Mods to Files | T5.1 Thunderstore and GameBanana downloads to `Documents/Mods/<game>/`. T5.2 Hide install-into-game actions on iOS. T5.3 `Info.plist` file sharing keys (done early in T1.5). | G1 to G5 | Yes | Draft |
 | M6 iPhone and iPad UI | T6.1 Safe areas and keyboard insets. T6.2 iPad regular-width layout, Split View and Stage Manager; add `UIApplicationSceneManifest` scene support (G3 M1-P1). T6.3 Touch targets and edge-swipe review. T6.4 Dark and light themes. | G1 to G5 | Yes | Draft |
 | M7 AOT and performance | T7.0 Remove `JsonSerializerIsReflectionEnabledByDefault=true` from the iOS head once T7.1 lands (G3 M1-AP1). T7.1 Source-generated JSON for all persisted types. T7.2 Compiled bindings on iOS views. T7.3 Clear trimmer warnings; consider `TrimMode=full`. T7.4 Measure startup and IPA size. | G1 to G4 | No | Draft |
-| M8 Release | T8.1 `fletch-v1.0.0` tag and GitHub Release. T8.2 Full device checklist on iPhone and iPad. T8.3 README section for Fletch. | G1 to G5 | Yes (full) | Draft |
+| M8 Release | T8.0 Fletch "new version available" notice on iOS against Aknaru404/Fletch releases (moved from T2.4, D14). T8.1 `fletch-v1.0.0` tag and GitHub Release. T8.2 Full device checklist on iPhone and iPad. T8.3 README section for Fletch. | G1 to G5 | Yes (full) | Draft |
 
 ## 6. Definition of done
 
