@@ -163,7 +163,7 @@ public sealed class GameBananaModProvider : IModProvider
 
         if (!LooksLikeSupportedArchiveUrl(version.DownloadUrl))
             throw new InvalidOperationException(
-                "This GameBanana file does not look like a zip, 7z, or rar archive. Fletch only installs zip/7z/rar mods.");
+                "This GameBanana file does not look like a zip, 7z, or rar archive. Quiver Launcher only installs zip/7z/rar mods.");
 
         using var request = new HttpRequestMessage(HttpMethod.Get, version.DownloadUrl);
         using var response = await _httpClient
@@ -178,7 +178,7 @@ public sealed class GameBananaModProvider : IModProvider
             !LooksLikeSupportedArchiveContentType(contentType))
         {
             throw new InvalidOperationException(
-                "This GameBanana download is not a zip, 7z, or rar archive. Fletch only installs zip/7z/rar mods.");
+                "This GameBanana download is not a zip, 7z, or rar archive. Quiver Launcher only installs zip/7z/rar mods.");
         }
 
         var total = response.Content.Headers.ContentLength ?? version.FileSize;
@@ -199,7 +199,7 @@ public sealed class GameBananaModProvider : IModProvider
                 if (!IsSupportedArchiveHeader(header))
                 {
                     throw new InvalidOperationException(
-                        "Downloaded file is not a zip, 7z, or rar archive. Fletch only installs zip/7z/rar mods.");
+                        "Downloaded file is not a zip, 7z, or rar archive. Quiver Launcher only installs zip/7z/rar mods.");
                 }
             }
 

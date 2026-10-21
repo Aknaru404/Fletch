@@ -150,12 +150,12 @@ public sealed class ShellViewModel : ObservableViewModel
                 if (!string.IsNullOrEmpty(_lastLauncherCheckNote))
                 {
                     return string.IsNullOrEmpty(lastChecked)
-                        ? $"Check for {QuiverLauncherProfile.Instance.DisplayName} and app updates · {_lastLauncherCheckNote}"
-                        : $"Check for {QuiverLauncherProfile.Instance.DisplayName} and app updates · {_lastLauncherCheckNote} · {lastChecked}";
+                        ? $"Check for Fletch and app updates · {_lastLauncherCheckNote}"
+                        : $"Check for Fletch and app updates · {_lastLauncherCheckNote} · {lastChecked}";
                 }
 
                 if (!string.IsNullOrEmpty(lastChecked))
-                    return $"Check for {QuiverLauncherProfile.Instance.DisplayName} and app updates · Up to date · {lastChecked}";
+                    return $"Check for Fletch and app updates · Up to date · {lastChecked}";
 
                 return "Check for Fletch and app updates";
             }

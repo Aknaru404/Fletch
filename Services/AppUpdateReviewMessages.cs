@@ -4,10 +4,12 @@ namespace QuiverLauncher.Services;
 
 public static class AppUpdateReviewMessages
 {
+    public const string UpdateLauncherButtonLabel = "Update Fletch";
+
     public static string FormatQuiverOnlyUpdateMessage(string? launcherVersion)
     {
         var version = FormatLauncherVersion(launcherVersion);
-        return $"{QuiverLauncherProfile.Instance.DisplayName} update {version} is available.\n\nUpdate {QuiverLauncherProfile.Instance.DisplayName} now?";
+        return $"Fletch update {version} is available.\n\nUpdate Fletch now?";
     }
 
     public static string FormatCombinedUpdatesMessage(
@@ -25,7 +27,7 @@ public static class AppUpdateReviewMessages
 
         var appLines = ordered.Select(FormatGameUpdateLine);
         return
-            $"{QuiverLauncherProfile.Instance.DisplayName} update {version} is available.\n\n" +
+            $"Fletch update {version} is available.\n\n" +
             appHeader + "\n\n" +
             string.Join('\n', appLines) +
             "\n\nWhat would you like to update?";

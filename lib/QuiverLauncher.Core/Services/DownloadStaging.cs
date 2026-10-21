@@ -2,7 +2,7 @@ namespace QuiverLauncher.Core.Services;
 
 internal static class DownloadStaging
 {
-    internal const string FolderName = "QuiverDownloads";
+    internal const string FolderName = "FletchDownloads";
 
     internal static string GetDesktopRoot() =>
         Path.Combine(Path.GetTempPath(), FolderName);

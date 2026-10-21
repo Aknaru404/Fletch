@@ -30,6 +30,8 @@ public class FletchUserTextTests
     [
         "Keep Quiver Launcher running in the notification area",
         "A cabinet should also make Quiver the Windows shell",
+        "Hide Quiver Window Controls",
+        "Adjust the size of text and controls in Quiver.",
     ];
 
     private static readonly Regex UserVisibleAttribute = new(
@@ -68,6 +70,101 @@ public class FletchUserTextTests
         messages.Should().NotContain(m => m.Contains("Quiver", StringComparison.OrdinalIgnoreCase));
         AppUpdateReviewMessages.FormatQuiverOnlyUpdateMessage("v1.2.0")
             .Should().Be("Fletch update v1.2.0 is available.\n\nUpdate Fletch now?");
+    }
+
+    [Fact]
+    public void GitHub_token_link_names_Fletch()
+    {
+        // Settings → Create token and the rate-limit dialog open this link on iOS.
+        GitHubTokenSetupGuide.CreateTokenUrl.Should().Be(
+            "https://github.com/settings/tokens/new?description=Fletch+Token+for+increased+API+rate+limits");
+    }
+
+    [Fact]
+    public void First_run_welcome_mentions_the_catalog_only_when_there_is_one()
+    {
+        LauncherUpdateWorkflow.FirstRunWelcomeMessage.Should().Be(LauncherUpdateWorkflow.GetFirstRunWelcomeMessage(hasAppCatalog: false));
+        LauncherUpdateWorkflow.GetFirstRunWelcomeMessage(hasAppCatalog: false)
+            .Should().NotContainEquivalentOf("catalog").And.Contain("GitHub, GitLab or Codeberg");
+        LauncherUpdateWorkflow.GetFirstRunWelcomeMessage(hasAppCatalog: true).Should().Contain("Browse the catalog");
+    }
+
+    [Fact]
+    public void Update_Fletch_button_is_affirmative_for_the_gamepad()
+    {
+        // LauncherPromptService and App.Updates label the button with this; the gamepad must treat it as Yes.
+        AppUpdateReviewMessages.UpdateLauncherButtonLabel.Should().Be("Update Fletch");
+        GamepadModalDialogNavigation.IsAffirmativeDialogButtonLabel(AppUpdateReviewMessages.UpdateLauncherButtonLabel).Should().BeTrue();
+    }
+
+    // Source files whose "Quiver" literals D13 leaves as upstream, because iOS never runs or shows them.
+    private static readonly Dictionary<string, string[]?> UpstreamQuiverText = new()
+    {
+        // Android only.
+        ["QuiverLauncher.Android/"] = null,
+        ["Services/AndroidLauncherPackageValidation.cs"] = null,
+        ["Services/AndroidLauncherUpdater.cs"] = null,
+        // Command line only.
+        ["Services/CLIHandler.cs"] = null,
+        ["Services/IGameDownloadDialogs.cs"] = null,
+        // Desktop only: tray, macOS menu, Velopack self-update, data move, Windows installers, Flatpak, shortcuts.
+        ["App.axaml.cs"] = null,
+        ["App.MacMenu.cs"] = null,
+        ["Services/LauncherUpdateBackup.cs"] = null,
+        ["Services/LauncherUpdateFailure.cs"] = null,
+        ["Services/QuiverLauncherPaths.cs"] = null,
+        ["Services/UserDataRescue.cs"] = null,
+        ["Services/WindowsInstallerService.cs"] = null,
+        ["Services/GameDialogService.cs"] = null,
+        ["Services/GameInstallLocationService.cs"] = null,
+        ["Services/GameLaunchService.cs"] = null,
+        ["Services/FlatpakService.cs"] = null,
+        ["Services/GameShortcutLaunch.cs"] = null,
+        ["Services/ShortcutHelper.cs"] = null,
+        ["Views/ShortcutExecutableDialog.cs"] = null,
+        // Mods need a mods folder, which mobile lacks (PlatformCapabilities.SupportsModsFolder).
+        ["Services/Mods/Providers/GameBanana/GameBananaModProvider.cs"] = null,
+        // Desktop delete: mobile uninstalls through its own branch before these messages.
+        ["Services/LibraryActions.cs"] =
+        [
+            "Quiver Launcher will attempt to move game files to your system's Recycle Bin / Trash",
+            "so Quiver Launcher leaves the folder",
+            "Only the file Quiver Launcher downloaded there",
+            "and Quiver Launcher stops using the folder.",
+        ],
+    };
+
+    // Internal names, not text: resource URIs, the assembly/executable name, and type names in interpolation holes.
+    private static readonly Regex InternalQuiverName = new(
+        @"avares://QuiverLauncher/|\bQuiverLauncher(?:Profile|Paths|_SKIP_UPDATES)?\b|\bQuiverCatalogClient\b", RegexOptions.Compiled);
+    private static readonly Regex RawLiteral = new(@"""{3,}[\s\S]*?""{3,}", RegexOptions.Compiled);
+    private static readonly Regex Literal = new(@"""(?:[^""\\\r\n]|\\.)*""", RegexOptions.Compiled);
+
+    [Fact]
+    public void Source_strings_do_not_say_Quiver_outside_upstream_only_files()
+    {
+        var offending = new List<string>();
+        foreach (var file in Directory.EnumerateFiles(RepoRoot, "*.cs", SearchOption.AllDirectories))
+        {
+            var relative = Path.GetRelativePath(RepoRoot, file).Replace('\\', '/');
+            if (relative.Split('/').Any(part => part is "bin" or "obj" or "QuiverLauncher.Tests"))
+                continue;
+            var allowed = UpstreamQuiverText.FirstOrDefault(entry => relative.StartsWith(entry.Key, StringComparison.Ordinal));
+            if (allowed.Key != null && allowed.Value == null)
+                continue;
+
+            var source = File.ReadAllText(file);
+            var literals = RawLiteral.Matches(source).Select(m => m.Value).ToList();
+            literals.AddRange(RawLiteral.Replace(source, "").Split('\n')
+                .Where(line => !line.TrimStart().StartsWith("//", StringComparison.Ordinal))
+                .SelectMany(line => Literal.Matches(line).Select(m => m.Value)));
+            offending.AddRange(literals
+                .Where(literal => InternalQuiverName.Replace(literal, "").Contains("Quiver", StringComparison.Ordinal))
+                .Where(literal => allowed.Value?.Any(literal.Contains) != true)
+                .Select(literal => $"{relative}: {literal}"));
+        }
+
+        offending.Should().BeEmpty("iOS must not show Quiver (TRADEMARKS.md, PLAN D13); desktop/Android-only files are listed above");
     }
 
     [Fact]

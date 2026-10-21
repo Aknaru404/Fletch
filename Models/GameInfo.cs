@@ -730,7 +730,7 @@ namespace QuiverLauncher.Models
             (string.IsNullOrWhiteSpace(InstalledVersion) || IsNewerVersion(CatalogUnverifiedVersion!, InstalledVersion!));
         public string UnverifiedReleaseLabel => $"{CatalogUnverifiedVersion} not verified yet";
         public string UnverifiedReleaseToolTip =>
-            $"{QuiverLauncherProfile.Instance.DisplayName} only updates to releases the catalog has verified. To install {CatalogUnverifiedVersion} now, use Versions → {InstallUnverifiedReleaseLabel}.";
+            $"Fletch only updates to releases the catalog has verified. To install {CatalogUnverifiedVersion} now, use Versions → {InstallUnverifiedReleaseLabel}.";
         /// <summary>The menu item that installs the unverified release (it asks first).</summary>
         public string InstallUnverifiedReleaseLabel => $"Install {CatalogUnverifiedVersion} (not verified)";
         public bool CanInstallUnverifiedRelease => ShowUnverifiedRelease && CanChangeVersion;

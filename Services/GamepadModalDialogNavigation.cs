@@ -670,7 +670,7 @@ public sealed class GamepadModalDialogNavigation
         "uninstall",
         "download anyway",
         "open settings",
-        "update fletch",
+        AppUpdateReviewMessages.UpdateLauncherButtonLabel,
         "update apps",
         "save",
         "save & download",

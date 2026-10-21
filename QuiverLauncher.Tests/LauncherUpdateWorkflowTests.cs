@@ -17,7 +17,8 @@ public class LauncherUpdateWorkflowTests
         public bool CanShowFailureSummary => false;
         public int ReviewsOpened;
         public void OpenAppUpdatesReview() => ReviewsOpened++;
-        public void OpenBrowse() => throw new InvalidOperationException();
+        public int BrowseOpened;
+        public void OpenBrowse() => BrowseOpened++;
         public void UpdateStatusChanged() { }
     }
 
@@ -71,15 +72,17 @@ public class LauncherUpdateWorkflowTests
         var overlay = new MessagePromptView(); overlay.Configure(session);
         using var dialogs = new LauncherDialogLifetime(session.Token, action => action());
         var window = new Window { Content = overlay, Width = 700, Height = 500 };
-        // OpenBrowse throws: the App Catalog is off in Fletch (PlatformCapabilities.HasAppCatalog).
+        // The App Catalog is off in Fletch (PlatformCapabilities.HasAppCatalog), so Browse must not open.
+        var presentation = new ReviewPresentation();
         var workflow = new LauncherUpdateWorkflow(manager, library.Settings, library, new ShellViewModel(), session,
-            new LauncherPromptService(session, dialogs, overlay), new ReviewPresentation(), () => null, new VelopackUpdateService(),
+            new LauncherPromptService(session, dialogs, overlay), presentation, () => null, new VelopackUpdateService(),
             () => Task.CompletedTask, _ => Task.FromResult(false));
         try
         {
             window.Show();
             await workflow.ShowFirstRunWelcomeIfNeededAsync().WaitAsync(TimeSpan.FromSeconds(3));
             store.Current.LocalFirstCatalogMigrationComplete.Should().BeTrue();
+            presentation.BrowseOpened.Should().Be(0);
             var welcome = LauncherPromptService.CreateWelcomeMessageBoxWindow(LauncherUpdateWorkflow.FirstRunWelcomeMessage, "Welcome");
             Avalonia.LogicalTree.LogicalExtensions.GetLogicalDescendants(welcome).OfType<Button>()
                 .Select(b => b.Content as string).Should().NotContain("Browse app catalog");

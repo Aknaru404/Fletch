@@ -459,7 +459,7 @@
 
 											<StackPanel Spacing="2" IsVisible="{Binding ShowOSTopBar}">
 												<CheckBox x:Name="HideWindowControlsCheckBox"
-														  Content="Hide Fletch Window Controls"
+														  Content="Hide Quiver Window Controls"
 														  Foreground="{DynamicResource ThemeText}"
 														  FontSize="13" FontWeight="SemiBold"
 														  IsChecked="{Binding HideWindowControls, Mode=TwoWay}"/>
@@ -484,7 +484,7 @@
 													<ComboBoxItem Content="200%"/>
 													<ComboBoxItem Content="225%"/>
 												</ComboBox>
-												<TextBlock Text="Adjust the size of text and controls in Fletch. Applies immediately."
+												<TextBlock Text="Adjust the size of text and controls in Quiver. Applies immediately."
 													TextWrapping="Wrap" FontSize="11" Foreground="{DynamicResource ThemeTextSecondary}"/>
 												<TextBlock Text="{Binding InterfaceScaleNotice}" IsVisible="{Binding ShowInterfaceScaleNotice}"
 													TextWrapping="Wrap" FontSize="11" Foreground="{DynamicResource ThemeTextSecondary}"/>

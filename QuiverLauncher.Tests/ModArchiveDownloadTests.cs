@@ -78,7 +78,7 @@ public class ModArchiveDownloadTests
     {
         var content = new StreamContent(new FailAfterBytesStream(new byte[16_384]));
         content.Headers.ContentLength = 32_768;
-        var tempDir = Path.Combine(Path.GetTempPath(), "QuiverMods");
+        var tempDir = Path.Combine(Path.GetTempPath(), "FletchMods");
         var before = Directory.Exists(tempDir)
             ? Directory.GetFiles(tempDir, "*.mod")
             : [];

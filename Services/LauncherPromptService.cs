@@ -60,7 +60,7 @@ public sealed class LauncherPromptService(LauncherSession session, LauncherDialo
             };
             var updateQuiverButton = new Button
             {
-                Content = "Update Fletch",
+                Content = AppUpdateReviewMessages.UpdateLauncherButtonLabel,
                 MinWidth = 110,
                 Margin = new Thickness(0, 0, 8, 0),
             };

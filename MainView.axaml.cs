@@ -1632,11 +1632,11 @@ namespace QuiverLauncher
 
         private void WebsiteButton_Click(object sender, RoutedEventArgs e)
         {
-            if (KioskLocked || !ShowUpstreamLinks || QuiverCatalogClient.WebsiteUrl is not { } website)
+            if (KioskLocked || !ShowUpstreamLinks)
                 return;
             try
             {
-                OpenUrl(website);
+                OpenUrl(QuiverCatalogClient.WebsiteUrl!);
             }
             catch (Exception ex)
             {

@@ -88,7 +88,7 @@ internal sealed class LibraryFileStore(string path, Action<byte[]> validate)
             // File.Exists hides access errors. Only an actual FileNotFoundException
             // can mean a new library; persisted backups distinguish it after restart.
             if (_hasSeenLibrary || HasRecoveryFiles())
-                throw new IOException($"The library file is missing: {path}. {QuiverLauncherProfile.Instance.DisplayName} will not replace it. Close {QuiverLauncherProfile.Instance.DisplayName} and restore apps.json from {BackupDirectory}.");
+                throw new IOException($"The library file is missing: {path}. Fletch will not replace it. Close Fletch and restore apps.json from {BackupDirectory}.");
             return null;
         }
     }
