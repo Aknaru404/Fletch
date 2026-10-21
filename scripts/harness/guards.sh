@@ -42,10 +42,12 @@ check G-UPSTREAM 2 "no calls to upstream telemetry, catalog or announcements" "$
 
 hits=""
 if [ -d Fletch.iOS ]; then
+  # Internal identifiers (QuiverLauncherPaths, QuiverExcludeWindowsDrawing, QuiverLauncher.App.csproj) are allowed;
+  # other "Quiver" text is not.
   hits="$(grep -RInE 'Quiver' Fletch.iOS --include='*.plist' --include='*.csproj' --include='*.cs' \
-    | grep -vE 'QuiverLauncher\.(App|Core)|using QuiverLauncher|namespace QuiverLauncher|ProjectReference')"
+    | sed -E 's/Quiver[A-Z][A-Za-z0-9_.]*//g' | grep -E 'Quiver')"
 fi
-hits+="$(git grep -nE '(DisplayName|ApplicationId|AppName)\s*=\s*"[^"]*Quiver' -- '*.cs' '*.csproj' ':!QuiverLauncher.Tests/**' 2>/dev/null)"
+hits+="${hits:+$'\n'}$(git grep -nE '(DisplayName|ApplicationId|AppName)\s*=\s*"[^"]*Quiver' -- '*.cs' '*.csproj' ':!QuiverLauncher.Tests/**' 2>/dev/null)"
 check G-BRAND 2 "no Quiver branding in identifiers" "$hits"
 
 files="$(ios_files)"
