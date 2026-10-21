@@ -22,18 +22,20 @@ env:
 jobs:
   ios:
     # One macOS job per push: macOS runners are scarce (PLAN R7).
-    runs-on: macos-15
+    runs-on: macos-26
     timeout-minutes: 75
 
     steps:
     - name: Checkout
       uses: actions/checkout@v4
 
-    - name: Select newest Xcode 26
+    # The iOS workload is pinned to the 26.2 SDK pack (scripts/ci/ios-workload-rollback.json), which needs
+    # Xcode 26.2 exactly. Runner images do not ship Xcode 27 yet, which the newest workload (27.x) requires.
+    - name: Select Xcode 26.2
       run: |
         ls -d /Applications/Xcode*.app
-        xcode="$(ls -d /Applications/Xcode_26*.app | sort -V | tail -1)"
-        [ -n "$xcode" ] || { echo "::error::No Xcode 26 on this runner image; Avalonia.iOS 12.1.1 targets net10.0-ios26.0"; exit 1; }
+        xcode="$(ls -d /Applications/Xcode_26.2*.app | sort -V | tail -1)"
+        [ -n "$xcode" ] || { echo "::error::Xcode 26.2 is not on this runner image"; exit 1; }
         sudo xcode-select -s "$xcode"
         xcodebuild -version
 
@@ -44,7 +46,8 @@ jobs:
 
     - name: Install iOS workload
       run: |
-        dotnet workload install ios
+        dotnet workload config --update-mode manifests
+        dotnet workload install ios --from-rollback-file scripts/ci/ios-workload-rollback.json
         dotnet workload list
 
     - name: Build device app (unsigned)
