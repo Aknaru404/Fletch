@@ -55,13 +55,13 @@ Out of scope: launching downloaded apps, installing packages from inside the app
 |---|---|---|
 | B1 Linux build and tests | Container (G1) and CI `test` job | `scripts/harness/gate-local.sh` |
 | B2 Select toolchain | CI, `macos-26-intel` | `sudo xcode-select -s /Applications/Xcode_26.3.app` (pack 26.2.10233 requires Xcode 26.3); `dotnet workload config --update-mode manifests`; `dotnet workload install ios --from-rollback-file scripts/ci/ios-workload-rollback.json` (pins the iOS 26.2 SDK pack; the 27.x workload needs Xcode 27, not yet on runner images) |
-| B3 Device build, unsigned | CI | `dotnet publish Fletch.iOS -c Release -f net10.0-ios -r ios-arm64 -p:EnableCodeSigning=false -p:ArchiveOnBuild=false` |
+| B3 Device build, unsigned | CI | `scripts/ci/ios-build.sh ios-arm64 -p:EnableCodeSigning=false` (`dotnet build -c Release`; errors become annotations) |
 | B4 Package IPA | CI | `mkdir Payload && cp -R <publish>/Fletch.app Payload/ && zip -qry Fletch-<version>-unsigned.ipa Payload` |
-| B5 Simulator smoke | CI | Build `-r iossimulator-x64` (runner architecture); `xcrun simctl boot` iPhone and iPad; `simctl install`; `simctl launch io.github.aknaru404.fletch`; wait 20 s; `simctl io booted screenshot` per device |
+| B5 Simulator smoke | CI | `scripts/ci/ios-build.sh "$SIM_RID"`; boot newest iPhone and iPad Pro simulators; install; launch `io.github.aknaru404.fletch`; assert still running after 45 s; screenshot, log and `crash.log` per device |
 | B6 Publish | CI on tag `fletch-v*` | GitHub Release with the IPA attached |
 | B7 Install | Owner | Download IPA, upload to Signulous, install, run the device checklist |
 
-CI layout: new workflow `.github/workflows/ios.yml` (jobs `test`, `ios-build`, `ios-simulator`, `release`). The upstream `dotnet-desktop.yml` pack and publish jobs are limited to `workflow_dispatch` on the fork, because they need upstream signing secrets.
+CI layout: `.github/workflows/ios.yml`, one macOS job (device IPA, then simulator smoke) on pushes to `main` and `claude/**`; Linux tests run in `dotnet-desktop.yml` on the PR; release job added in M8. The upstream `dotnet-desktop.yml` pack and publish jobs are limited to `workflow_dispatch` on the fork, because they need upstream signing secrets.
 
 ## 5. Milestones and tasks
 
@@ -72,11 +72,11 @@ Status: Draft, Approved, In progress, Done. App code starts only for a task unde
 | M0 Harness | T0.1 `CLAUDE.md`, agents, gate scripts, SessionStart hook. T0.2 This plan. T0.3 Baseline: Linux suite 1,789 passed, 3 root-only failures tolerated. T0.4 Fork CI: upstream Windows, macOS and Flatpak packaging run only on manual dispatch (moved from T1.3; macOS runner capacity cancelled PR 1). | G1, owner review | No | Approved |
 | M1 Toolchain spike | T1.1 Empty `Fletch.iOS` head showing the existing `MainView`. T1.2 `ios.yml` producing an unsigned IPA and simulator screenshots. T1.3 (moved to T0.4). T1.4 Owner installs via Signulous and confirms launch. T1.5 `Info.plist` file-sharing keys added early (from T5.3) so `crash.log` in Documents can be fetched from Files during G5. | G1 to G5 | Yes (launch only) | Approved |
 | M2 Identity and upstream services | T2.1 Fletch identifiers and icon. T2.2 Remove telemetry. T2.3 Remove catalog and announcements, hide the catalog UI. T2.4 Update checks point to Aknaru404/Fletch releases (notify only). | G1 to G4 | No | Draft |
-| M3 Platform layer | T3.1 Capability flags and call-site audit. T3.2 iOS paths: caches (`Cache/`, artwork) under `Library/Caches`, library under Documents (G2 M1-A2). T3.3 `TargetOS.iOS` and asset selection. T3.5 iOS `IAppInstallLaunchService` so Launch and Install never reach the desktop `Process.Start` path (G2 M1-A7). T3.4 Disable Wine, Steam shortcuts, tray, gamepad and Velopack on iOS through the flags. | G1 to G4 | No | Draft |
+| M3 Platform layer | T3.1 Capability flags and call-site audit. T3.2 iOS paths: caches (`Cache/`, artwork) under `Library/Caches` with a size cap, library under Documents (G2 M1-A2, G3 M1-AP5); document or replace the `OverrideUserDataRoot` test seam used by the iOS head (G3 M1-S1); keep identity in the csproj only and drop duplicate Info.plist keys (G3 M1-S2). T3.3 `TargetOS.iOS` and asset selection. T3.5 iOS `IAppInstallLaunchService` so Launch and Install never reach the desktop `Process.Start` path (G2 M1-A7). T3.4 Disable Wine, Steam shortcuts, tray, gamepad and Velopack on iOS through the flags. | G1 to G4 | No | Draft |
 | M4 IPA hand-off | T4.1 Download to `Documents/Downloads` with progress and cancel. T4.2 Share sheet hand-off. T4.3 Library states: Not downloaded, Downloaded, Update available. T4.4 Delete downloaded file. | G1 to G5 | Yes | Draft |
 | M5 Mods to Files | T5.1 Thunderstore and GameBanana downloads to `Documents/Mods/<game>/`. T5.2 Hide install-into-game actions on iOS. T5.3 `Info.plist` file sharing keys (done early in T1.5). | G1 to G5 | Yes | Draft |
-| M6 iPhone and iPad UI | T6.1 Safe areas and keyboard insets. T6.2 iPad regular-width layout, Split View and Stage Manager. T6.3 Touch targets and edge-swipe review. T6.4 Dark and light themes. | G1 to G5 | Yes | Draft |
-| M7 AOT and performance | T7.1 Source-generated JSON for all persisted types. T7.2 Compiled bindings on iOS views. T7.3 Clear trimmer warnings; consider `TrimMode=full`. T7.4 Measure startup and IPA size. | G1 to G4 | No | Draft |
+| M6 iPhone and iPad UI | T6.1 Safe areas and keyboard insets. T6.2 iPad regular-width layout, Split View and Stage Manager; add `UIApplicationSceneManifest` scene support (G3 M1-P1). T6.3 Touch targets and edge-swipe review. T6.4 Dark and light themes. | G1 to G5 | Yes | Draft |
+| M7 AOT and performance | T7.0 Remove `JsonSerializerIsReflectionEnabledByDefault=true` from the iOS head once T7.1 lands (G3 M1-AP1). T7.1 Source-generated JSON for all persisted types. T7.2 Compiled bindings on iOS views. T7.3 Clear trimmer warnings; consider `TrimMode=full`. T7.4 Measure startup and IPA size. | G1 to G4 | No | Draft |
 | M8 Release | T8.1 `fletch-v1.0.0` tag and GitHub Release. T8.2 Full device checklist on iPhone and iPad. T8.3 README section for Fletch. | G1 to G5 | Yes (full) | Draft |
 
 ## 6. Definition of done

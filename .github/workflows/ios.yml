@@ -66,10 +66,15 @@ jobs:
         [ "$(plutil -extract CFBundleIdentifier raw "$app/Info.plist")" = "$BUNDLE_ID" ] || { echo "::error::wrong bundle id"; exit 1; }
         [ -x "$app/Fletch" ] || { echo "::error::app executable missing"; exit 1; }
         [ ! -e "$app/embedded.mobileprovision" ] || { echo "::error::IPA must be unsigned"; exit 1; }
+        [ "$(lipo -archs "$app/Fletch")" = "arm64" ] || { echo "::error::executable is not arm64-only: $(lipo -archs "$app/Fletch")"; exit 1; }
+        [ "$(plutil -extract MinimumOSVersion raw "$app/Info.plist")" = "17.0" ] || { echo "::error::MinimumOSVersion is not 17.0"; exit 1; }
         version="$(plutil -extract CFBundleShortVersionString raw "$app/Info.plist")"
         mkdir -p staging/Payload
         cp -R "$app" staging/Payload/
-        (cd staging && zip -qry "../artifacts/Fletch-${version}-${GITHUB_SHA::7}-unsigned.ipa" Payload)
+        ipa="artifacts/Fletch-${version}-${GITHUB_SHA::7}-unsigned.ipa"
+        (cd staging && zip -qry "../$ipa" Payload)
+        unzip -l "$ipa" | grep -q ' Payload/Fletch.app/Fletch$' || { echo "::error::IPA layout is not Payload/Fletch.app"; exit 1; }
+        echo "::notice::IPA size $(stat -f%z "$ipa") bytes"
         ls -l artifacts
 
     - name: Build simulator app
