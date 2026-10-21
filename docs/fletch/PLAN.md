@@ -170,3 +170,35 @@ Constraints: about 4.2 GB free storage on the device; Morrowind data with expans
 | Run unmodified on iPad | n/a | Not possible: box64, FEX and Wine all need JIT |
 
 The GOG route removes the legal issue and makes supplying assets through Files simple, but the code-translation work is at least as hard as the 360 route. Research-scale only. GOG users report launch problems on modern Windows; check the GOG support page before buying.
+
+### X4 Emulators and streaming on the owner's iPad, for reference (2026-10-21; ideas only)
+
+| Platform | iOS emulator | On iPad Pro 11-inch (2018) |
+|---|---|---|
+| PS1, N64, NDS, GBA and older | Delta, RetroArch, Gamma, Provenance (App Store, no JIT needed) | Full speed |
+| PSP | PPSSPP (App Store interpreter; JIT when sideloaded) | Most games full speed |
+| GameCube, Wii | DolphiniOS (sideloaded, needs JIT) | Many games playable with JIT |
+| PS2 (God of War 1/2) | Play! (App Store interpreter; JIT when sideloaded) | God of War will not hold full speed |
+| Xbox 360, original Xbox | None on iOS (Xenia and xemu are desktop only) | Not possible |
+| Windows XP-era PC games | UTM (JIT when sideloaded) or UTM SE (no JIT) | Unusable for 3D games; no 3D acceleration for Windows guests |
+
+| Practical route | Covers | Notes |
+|---|---|---|
+| Engine rebuilds (X2) | Morrowind, Daggerfall, Fallout 1/2, Diablo, Infinity Engine games | Native speed, no JIT |
+| Streaming from own PC (Moonlight, Steam Link) | Anything the PC runs, including Assassin's Creed (GOG) | Needs a gaming-capable Windows PC on the network; the only working route for Assassin's Creed today |
+| Cloud streaming (Xbox Cloud Gaming, GeForce NOW) | Titles in their catalogues | Subscription and strong connection |
+| Official App Store versions | KOTOR 1/2, Baldur's Gate and Icewind Dale EE | Buy and play |
+
+### X5 Routes to an Assassin's Creed IPA (2026-10-21; ideas only)
+
+Mixing Xbox 360 code with GOG PC assets is not viable: byte order, texture formats, shaders and content differ between the builds.
+
+| Route | How | Covers | Needs JIT | Maturity | Rough effort |
+|---|---|---|---|---|---|
+| A. Xbox 360 static recompilation | XenonRecomp to ARM64, a new 360 runtime, GPU to Metal, assets from the owner's 360 disc | Assassin's Creed only | No | Tool proven on several 360 titles; no Assassin's Creed work exists | Months; several thousand dollars; disc decryption is a legal grey area |
+| B. PC x86 static recompilation | Translate the GOG executable to ARM64 and reimplement the Windows and DirectX 9/10 calls | Assassin's Creed only | No | x86 game recompilation tools are early-stage | Months or more; highest technical risk; cleanest legally |
+| C. Winlator-style iPad app | box64 (x86 dynamic recompiler) + Wine (Windows API) + DXVK (DirectX to Vulkan) + MoltenVK (Vulkan to Metal), running the owner's GOG files from Files | Any PC game the iPad can handle (Assassin's Creed, Oblivion, Fallout 3/NV, Diablo II) | Yes, through StikDebug each launch (X1) | The same stack (Winlator) runs Assassin's Creed on Android; not yet shipped on iOS | Spike about $100 to $300; full app several thousand dollars; months |
+
+- PowerPC (A) is the safer bet for one game without JIT. The x86 hybrid (C) pays off most across the owner's RPG list.
+- C's specific risks: Wine's multi-process design (iOS forbids extra processes, so an in-process variant is needed), JIT on each launch, and 4 GB RAM.
+- Suggested first step if pursued: a route C feasibility spike. First box64 plus a minimal Win32 program in an iOS app on the iPad with JIT via StikDebug, then a DirectX 9 test scene through DXVK and MoltenVK.
